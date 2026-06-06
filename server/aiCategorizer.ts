@@ -8,7 +8,12 @@
 import OpenAI from "openai";
 import mysql from "mysql2/promise";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAI(): OpenAI {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("AI feature is not configured. Missing OPENAI_API_KEY.");
+  }
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 // Standard restaurant pantry categories. Order matches the typical UI sort.
 const STANDARD_CATEGORIES: Array<{ name: string; nameAr: string; color: string }> = [
@@ -95,7 +100,7 @@ async function askOpenAI(
     .join("\n");
   const catList = categoryNames.join(" | ");
 
-  const completion = await openai.chat.completions.create({
+  const completion = await getOpenAI().chat.completions.create({
     model: "gpt-4o-mini",
     response_format: { type: "json_object" },
     temperature: 0,
