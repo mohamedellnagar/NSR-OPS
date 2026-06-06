@@ -1,0 +1,8 @@
+{
+  "query": "ALTER TABLE `app_settings` ADD `openingStockValue` decimal(14,2) DEFAULT '0' NOT NULL;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 3cjsGxwemvaujqk.52c851a953cb --database JZ9ZQe8jn8Q6aQTvzsiwjf --execute ALTER TABLE `app_settings` ADD `openingStockValue` decimal(14,2) DEFAULT '0' NOT NULL;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1060 (42S21) at line 1: Duplicate column name 'openingStockValue'"
+  ]
+}

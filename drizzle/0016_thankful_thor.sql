@@ -1,0 +1,1 @@
+ALTER TABLE `kitchen_daily_pulls` ADD `actualYield` decimal(12,3);

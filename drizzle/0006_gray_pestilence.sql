@@ -1,0 +1,1 @@
+ALTER TABLE `kitchen_daily_production` ADD `actualUnitCost` decimal(12,4);

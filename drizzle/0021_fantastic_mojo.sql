@@ -1,0 +1,1 @@
+ALTER TABLE `kitchen_daily_pulls` ADD `carriedRawQty` decimal(12,3) DEFAULT '0';

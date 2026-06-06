@@ -1,0 +1,1 @@
+ALTER TABLE `daily_accounts` ADD `carryForwardToNext` decimal(12,3);

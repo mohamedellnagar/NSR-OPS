@@ -1,0 +1,1 @@
+ALTER TABLE `kitchen_production_materials` ADD `wasteQty` decimal(12,3) DEFAULT '0';

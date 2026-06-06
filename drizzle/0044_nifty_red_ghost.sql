@@ -1,0 +1,1 @@
+ALTER TABLE `comparison_match_groups` ADD `matchReason` varchar(512);

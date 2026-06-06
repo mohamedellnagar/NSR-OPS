@@ -1,0 +1,1 @@
+ALTER TABLE `semi_finished_recipes` ADD `actualQuantity` decimal(12,4);

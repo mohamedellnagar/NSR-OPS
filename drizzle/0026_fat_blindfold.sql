@@ -1,0 +1,1 @@
+ALTER TABLE `report_subscriptions` MODIFY COLUMN `reportType` enum('daily_sales','orders_summary','kitchen_cost','inventory_value','waste_summary','system_alerts','warehouse_performance') NOT NULL;

@@ -1,0 +1,2 @@
+ALTER TABLE `free_invoices` MODIFY COLUMN `paymentStatus` enum('paid','deferred','partial','under_review') NOT NULL DEFAULT 'deferred';--> statement-breakpoint
+ALTER TABLE `invoices` MODIFY COLUMN `paymentStatus` enum('paid','deferred','partial','under_review') NOT NULL DEFAULT 'deferred';

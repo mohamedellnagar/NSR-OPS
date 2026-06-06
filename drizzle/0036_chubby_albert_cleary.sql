@@ -1,0 +1,1 @@
+ALTER TABLE `products` ADD `showInMenu` boolean DEFAULT true NOT NULL;

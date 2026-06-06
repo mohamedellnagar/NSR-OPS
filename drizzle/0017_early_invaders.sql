@@ -1,0 +1,1 @@
+ALTER TABLE `kitchen_daily_pulls` ADD `isCarriedForward` boolean DEFAULT false NOT NULL;

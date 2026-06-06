@@ -1,0 +1,1 @@
+ALTER TABLE `invoices` ADD `expenseCategory` enum('operational','maintenance','fixed','other') DEFAULT 'other';

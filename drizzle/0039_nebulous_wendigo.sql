@@ -1,0 +1,2 @@
+ALTER TABLE `report_subscriptions` MODIFY COLUMN `reportType` enum('daily_sales','orders_summary','kitchen_cost','inventory_value','waste_summary','system_alerts','warehouse_performance','kitchen_production','kitchen_pull','daily_account_summary','supplier_invoice_new','supplier_invoice_paid','free_invoice_new','free_invoice_paid','daily_summary_confirmed','food_cost_alert') NOT NULL;--> statement-breakpoint
+ALTER TABLE `report_subscriptions` MODIFY COLUMN `scheduleType` enum('hourly','daily','weekly','monthly','instant','event') NOT NULL;

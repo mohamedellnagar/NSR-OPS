@@ -1,0 +1,1 @@
+ALTER TABLE `app_settings` ADD `openingStockValue` decimal(14,2) DEFAULT '0' NOT NULL;

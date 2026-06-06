@@ -1,0 +1,220 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─── Design Tokens ──────────────────────────────────────────────────────────── */
+@theme inline {
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+
+  --color-background: oklch(0.98 0.005 240);
+  --color-foreground: oklch(0.15 0.015 240);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.15 0.015 240);
+  --color-popover: oklch(1 0 0);
+  --color-popover-foreground: oklch(0.15 0.015 240);
+  --color-primary: oklch(0.50 0.20 260);
+  --color-primary-foreground: oklch(1 0 0);
+  --color-secondary: oklch(0.94 0.01 240);
+  --color-secondary-foreground: oklch(0.25 0.015 240);
+  --color-muted: oklch(0.95 0.005 240);
+  --color-muted-foreground: oklch(0.50 0.01 240);
+  --color-accent: oklch(0.94 0.01 240);
+  --color-accent-foreground: oklch(0.25 0.015 240);
+  --color-destructive: oklch(0.55 0.22 25);
+  --color-destructive-foreground: oklch(1 0 0);
+  --color-border: oklch(0.90 0.005 240);
+  --color-input: oklch(0.90 0.005 240);
+  --color-ring: oklch(0.50 0.20 260);
+  --color-chart-1: oklch(0.55 0.18 260);
+  --color-chart-2: oklch(0.55 0.18 150);
+  --color-chart-3: oklch(0.65 0.18 60);
+  --color-chart-4: oklch(0.55 0.22 25);
+  --color-chart-5: oklch(0.60 0.15 300);
+  --color-sidebar: oklch(0.16 0.025 255);
+  --color-sidebar-foreground: oklch(0.92 0.01 240);
+  --color-sidebar-primary: oklch(0.65 0.18 260);
+  --color-sidebar-primary-foreground: oklch(1 0 0);
+  --color-sidebar-accent: oklch(0.22 0.025 255);
+  --color-sidebar-accent-foreground: oklch(0.92 0.01 240);
+  --color-sidebar-border: oklch(0.25 0.02 255);
+  --color-sidebar-ring: oklch(0.65 0.18 260);
+
+  --font-sans: 'Inter', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+}
+
+/* ─── Dark Theme ─────────────────────────────────────────────────────────────── */
+.dark {
+  --color-background: oklch(0.10 0.015 240);
+  --color-foreground: oklch(0.95 0.005 240);
+  --color-card: oklch(0.13 0.015 240);
+  --color-card-foreground: oklch(0.95 0.005 240);
+  --color-popover: oklch(0.13 0.015 240);
+  --color-popover-foreground: oklch(0.95 0.005 240);
+  --color-primary: oklch(0.65 0.20 260);
+  --color-primary-foreground: oklch(0.10 0.015 240);
+  --color-secondary: oklch(0.18 0.015 240);
+  --color-secondary-foreground: oklch(0.90 0.005 240);
+  --color-muted: oklch(0.18 0.015 240);
+  --color-muted-foreground: oklch(0.55 0.01 240);
+  --color-accent: oklch(0.20 0.015 240);
+  --color-accent-foreground: oklch(0.90 0.005 240);
+  --color-destructive: oklch(0.60 0.22 25);
+  --color-border: oklch(0.22 0.015 240);
+  --color-input: oklch(0.22 0.015 240);
+  --color-ring: oklch(0.65 0.20 260);
+}
+
+/* ─── Base Styles ────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* Arabic RTL font override */
+  [dir="rtl"], :lang(ar) {
+    font-family: 'IBM Plex Sans Arabic', 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-muted-foreground/30; }
+}
+
+/* ─── Container ──────────────────────────────────────────────────────────────── */
+@layer base {
+  .container {
+    @apply mx-auto px-4 sm:px-6 lg:px-8;
+    max-width: 1280px;
+  }
+}
+
+/* ─── Flex Defaults ──────────────────────────────────────────────────────────── */
+@layer base {
+  .flex { min-width: 0; min-height: 0; }
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────────── */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-in {
+  animation: slide-in-left 0.3s ease-out;
+}
+
+/* ─── Custom Component Utilities ─────────────────────────────────────────────── */
+@layer components {
+  /* Stock Status Badges */
+  .badge-normal {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700;
+  }
+
+  .badge-low {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-amber-50 text-amber-700;
+  }
+
+  .badge-out {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium bg-red-50 text-red-700;
+  }
+
+  /* Transaction Type Badges */
+  .badge-in-tx {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-700;
+  }
+
+  .badge-out-tx {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-red-50 text-red-700;
+  }
+
+  /* Number display (use tabular nums for alignment) */
+  .number-display {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* Sidebar CSS variables */
+  :root {
+    --sidebar: var(--color-sidebar);
+    --sidebar-foreground: var(--color-sidebar-foreground);
+    --sidebar-primary: var(--color-sidebar-primary);
+    --sidebar-accent: var(--color-sidebar-accent);
+    --sidebar-border: var(--color-sidebar-border);
+  }
+}
+
+/* ─── RTL Overrides ──────────────────────────────────────────────────────────── */
+[dir="rtl"] table th,
+[dir="rtl"] table td {
+  text-align: right;
+}
+
+/* ─── Menu Print Styles ──────────────────────────────────────────────────────── */
+@media print {
+  /* Hide everything except the menu page */
+  body > #root > * { display: none !important; }
+
+  /* Show only the menu wrapper inside the app */
+  .menu-print-root { display: block !important; }
+
+  /* Reset layout */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide sidebar, nav, toolbar */
+  aside, nav,
+  [class*="sidebar"], [class*="AppLayout"],
+  [class*="DashboardLayout"],
+  .no-print { display: none !important; }
+
+  /* Force the menu to fill full page */
+  .menu-page {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 99999 !important;
+    background: white !important;
+    overflow: auto !important;
+    padding: 0 !important;
+  }
+  .menu-wrap.menu-page * { visibility: visible !important; }
+}
