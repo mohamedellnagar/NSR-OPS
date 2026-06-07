@@ -464,13 +464,21 @@ export async function smartSyncFromCloud(
     // ── 3. Kitchen production tables — MERGE to preserve local data
     for (const t of [
       "kitchen_daily_pulls",          // الإنتاج اليومي الرئيسي
-      "kitchen_daily_production",     // بيانات الإنتاج التفصيلية
-      "kitchen_production_materials",
       "kitchen_production_counts",
     ]) {
       onProgress?.(`مزامنة ${t}...`);
       const r = await mergeTable(cloud, local, t);
       results.push({ table: t, strategy: "merge", ...r });
+    }
+
+    // ── 3b. Kitchen production cost tables — FULL REPLACE (fixes wrong local cost data)
+    for (const t of [
+      "kitchen_daily_production",     // بيانات الإنتاج وتكلفة الوحدة (actualUnitCost)
+      "kitchen_production_materials", // المواد المستهلكة في الإنتاج (تكلفة المطبخ)
+    ]) {
+      onProgress?.(`مزامنة كاملة لتكلفة المطبخ — ${t}...`);
+      const r = await syncReplaceTable(cloud, local, t);
+      results.push({ table: t, strategy: "replace", ...r });
     }
 
     // ── 4. Daily accounts ────────────────────────────────────────────────────
