@@ -480,6 +480,17 @@ export async function smartSyncFromCloud(
       results.push({ table: "daily_accounts", strategy: "replace", ...r });
     }
 
+    // ── 5. Daily production + consumption cost + waste cost — full table replace
+    for (const t of [
+      "kitchen_item_production",   // الإنتاج اليومي للأصناف
+      "kitchen_inventory_counts",  // تكلفة الاستهلاك (consumptionCost)
+      "waste_logs",                // تكلفة الهالك (totalCost)
+    ]) {
+      onProgress?.(`مزامنة كاملة لـ ${t}...`);
+      const r = await syncReplaceTable(cloud, local, t);
+      results.push({ table: t, strategy: "replace", ...r });
+    }
+
     await local.query("SET FOREIGN_KEY_CHECKS = 1");
 
     const finishedAt = new Date();
