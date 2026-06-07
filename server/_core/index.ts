@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import { startScheduler } from "../whatsappScheduler";
+import { startCloudAutoSync } from "../cloudAutoSync";
 import { handleWhatsAppWebhook, handleWebhookHealthCheck, captureRawBody } from "../waWebhookController";
 import { handleSseConnection } from "../sseBroadcaster";
 import { createServer } from "http";
@@ -229,6 +230,8 @@ async function startServer() {
     console.log(`Server running on http://localhost:${port}/`);
     // Start WhatsApp report scheduler
     startScheduler();
+    // Start automatic cloud sync (every minute, if CLOUD_DATABASE_URL is set)
+    startCloudAutoSync();
   });
 }
 
