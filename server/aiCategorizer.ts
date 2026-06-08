@@ -7,12 +7,14 @@
  */
 import OpenAI from "openai";
 import mysql from "mysql2/promise";
+import { getEffectiveOpenAIApiKey } from "./db";
 
-function getOpenAI(): OpenAI {
-  if (!process.env.OPENAI_API_KEY) {
+async function getOpenAI(): Promise<OpenAI> {
+  const apiKey = await getEffectiveOpenAIApiKey();
+  if (!apiKey) {
     throw new Error("AI feature is not configured. Missing OPENAI_API_KEY.");
   }
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return new OpenAI({ apiKey });
 }
 
 // Standard restaurant pantry categories. Order matches the typical UI sort.
@@ -100,7 +102,7 @@ async function askOpenAI(
     .join("\n");
   const catList = categoryNames.join(" | ");
 
-  const completion = await getOpenAI().chat.completions.create({
+  const completion = await (await getOpenAI()).chat.completions.create({
     model: "gpt-4o-mini",
     response_format: { type: "json_object" },
     temperature: 0,
@@ -146,8 +148,9 @@ export async function autoCategorizeMaterials(opts?: {
   const startedAt = Date.now();
   const onlyUncategorized = opts?.onlyUncategorized !== false; // default true
 
-  if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.startsWith("sk-placeholder")) {
-    throw new Error("OPENAI_API_KEY غير مُعد. ضع مفتاح حقيقي في .env");
+  const apiKey = await getEffectiveOpenAIApiKey();
+  if (!apiKey || apiKey.startsWith("sk-placeholder")) {
+    throw new Error("OPENAI_API_KEY غير مُعد. أضف مفتاح حقيقي من صفحة الإعدادات أو ملف .env");
   }
 
   const conn = await mysql.createConnection(process.env.DATABASE_URL!);

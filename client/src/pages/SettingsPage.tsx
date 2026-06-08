@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Building2, Clock, DollarSign, Globe, Phone, Mail, MapPin, Save, Loader2, AlertTriangle } from "lucide-react";
+import { Building2, Clock, DollarSign, Globe, Phone, Mail, MapPin, Save, Loader2, AlertTriangle, KeyRound, Eye, EyeOff } from "lucide-react";
 
 const TIMEZONES = [
   { value: "Asia/Dubai", label: "الإمارات (UTC+4)" },
@@ -57,6 +57,21 @@ export default function SettingsPage() {
     onError: (e) => toast.error(`فشل التغيير: ${e.message}`),
   });
   const utils = trpc.useUtils();
+
+  // ── OpenAI API Key ──
+  const openaiKeyStatus = trpc.settings.openaiKeyStatus.useQuery();
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
+  const saveApiKeyMut = trpc.settings.update.useMutation({
+    onSuccess: () => {
+      toast.success(ar ? "تم حفظ مفتاح OpenAI بنجاح" : "OpenAI API key saved");
+      setApiKeyInput("");
+      utils.settings.openaiKeyStatus.invalidate();
+    },
+    onError: (e) => toast.error(ar ? `خطأ: ${e.message}` : `Error: ${e.message}`),
+  });
+  const handleSaveApiKey = () => saveApiKeyMut.mutate({ openaiApiKey: apiKeyInput });
+  const handleClearApiKey = () => saveApiKeyMut.mutate({ openaiApiKey: "" });
 
   const [form, setForm] = useState({
     restaurantName: "",
@@ -424,6 +439,73 @@ export default function SettingsPage() {
               )}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* ─── OpenAI API Key (used by AI Chef, material categorizer/enhancer) ─── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <KeyRound className="h-5 w-5 text-muted-foreground" />
+            {ar ? "مفتاح OpenAI API" : "OpenAI API Key"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            {ar
+              ? "يُستخدم هذا المفتاح في ميزات الذكاء الاصطناعي (شيف الذكاء الاصطناعي، تصنيف المواد، تحسين بيانات المواد)."
+              : "Used by AI features (AI Chef, material categorizer, material enhancer)."}
+          </p>
+
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">{ar ? "الحالة:" : "Status:"}</span>
+            {openaiKeyStatus.data?.configured ? (
+              <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                ✅ {ar ? "مُفعّل" : "Configured"}
+                {openaiKeyStatus.data?.masked && (
+                  <span className="text-muted-foreground font-normal"> — {openaiKeyStatus.data.masked}</span>
+                )}
+                <span className="text-muted-foreground font-normal">
+                  {" "}({openaiKeyStatus.data?.source === "database"
+                    ? (ar ? "من الإعدادات" : "from settings")
+                    : (ar ? "من ملف .env" : "from .env")})
+                </span>
+              </span>
+            ) : (
+              <span className="text-amber-600 dark:text-amber-400 font-medium">
+                ⚠️ {ar ? "غير مُعد" : "Not configured"}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Input
+                type={showApiKey ? "text" : "password"}
+                placeholder={ar ? "sk-..." : "sk-..."}
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                dir="ltr"
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey((v) => !v)}
+                className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground"
+              >
+                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <Button onClick={handleSaveApiKey} disabled={!apiKeyInput.trim() || saveApiKeyMut.isPending} className="gap-2">
+              {saveApiKeyMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {ar ? "حفظ" : "Save"}
+            </Button>
+            {openaiKeyStatus.data?.source === "database" && (
+              <Button variant="outline" onClick={handleClearApiKey} disabled={saveApiKeyMut.isPending}>
+                {ar ? "مسح" : "Clear"}
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 

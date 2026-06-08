@@ -381,26 +381,61 @@ export async function smartSyncFromCloud(
       results.push({ table: t, strategy: "replace", ...r });
     }
 
-    // ── 2. Raw materials: UPDATE qty + prices only ───────────────────────────
-    onProgress?.("تحديث كميات وأسعار المواد الخام...");
+    // ── 2. Raw materials (incl. semi-finished items, materialType='semi_finished'):
+    //      UPDATE qty/prices for existing rows (no name/code overwrite), AND
+    //      INSERT any new materials that exist in the cloud but not locally —
+    //      this covers both new raw materials and new semi-finished materials,
+    //      since both live in the same `raw_materials` table.
+    onProgress?.("تحديث ومزامنة المواد الخام والمواد المصنّعة...");
     {
+      const cloudCols = await getCloudCols(cloud, "raw_materials");
       const localCols = await getLocalCols(local, "raw_materials");
+      const sharedCols = cloudCols.filter(c => localCols.includes(c));
       const updateCols = ["currentQuantity", "lastPurchasePrice", "averageCost", "minimumQuantity"]
         .filter(c => localCols.includes(c));
+
       const [cloudRows] = await cloud.query(
-        `SELECT id, ${updateCols.map(c => `\`${c}\``).join(", ")} FROM raw_materials`
+        `SELECT ${sharedCols.map(c => `\`${c}\``).join(", ")} FROM raw_materials`
       ) as any[];
+      const [localIdRows] = await local.query(`SELECT id FROM raw_materials`) as any[];
+      const localIds = new Set((localIdRows as any[]).map(r => r.id));
+
       let updated = 0;
+      let inserted = 0;
+      const colList = sharedCols.map(c => `\`${c}\``).join(", ");
       for (const row of cloudRows as any[]) {
-        const setClauses = updateCols
-          .filter(c => row[c] !== undefined && row[c] !== null)
-          .map(c => `\`${c}\` = ?`).join(", ");
-        if (!setClauses) continue;
-        const vals = updateCols.filter(c => row[c] !== undefined && row[c] !== null).map(c => row[c]);
-        await local.query(`UPDATE raw_materials SET ${setClauses} WHERE id = ?`, [...vals, row.id]);
-        updated++;
+        if (localIds.has(row.id)) {
+          // Existing material — update qty/price fields only (preserve local name/code edits)
+          const setClauses = updateCols
+            .filter(c => row[c] !== undefined && row[c] !== null)
+            .map(c => `\`${c}\` = ?`).join(", ");
+          if (!setClauses) continue;
+          const vals = updateCols.filter(c => row[c] !== undefined && row[c] !== null).map(c => row[c]);
+          await local.query(`UPDATE raw_materials SET ${setClauses} WHERE id = ?`, [...vals, row.id]);
+          updated++;
+        } else {
+          // New material (raw or semi-finished) — insert full row from cloud
+          const vals = sharedCols.map(c => {
+            const v = row[c];
+            if (v === null || v === undefined) return null;
+            if (v instanceof Date) return v;
+            if (Buffer.isBuffer(v)) return v;
+            if (typeof v === "object") return JSON.stringify(v);
+            return v;
+          });
+          try {
+            await local.query(`INSERT IGNORE INTO raw_materials (${colList}) VALUES (${sharedCols.map(() => "?").join(", ")})`, vals);
+            inserted++;
+          } catch { /* skip rows that fail to insert (e.g. FK to missing category) */ }
+        }
       }
-      results.push({ table: "raw_materials", strategy: "update_qty_price", rows: updated, cloudRows: (cloudRows as any[]).length, note: `✓ ${updated} مادة` });
+      results.push({
+        table: "raw_materials",
+        strategy: "update_and_insert",
+        rows: updated + inserted,
+        cloudRows: (cloudRows as any[]).length,
+        note: `✓ تحديث ${updated} — إضافة ${inserted} مادة جديدة`,
+      });
     }
 
     // ── 3. Kitchen tables — FULL REPLACE (حذف القديم وإضافة الجديد) لكل بيانات

@@ -1,10 +1,12 @@
 import OpenAI from "openai";
+import { getEffectiveOpenAIApiKey } from "./db";
 
-function getOpenAI(): OpenAI {
-  if (!process.env.OPENAI_API_KEY) {
+async function getOpenAI(): Promise<OpenAI> {
+  const apiKey = await getEffectiveOpenAIApiKey();
+  if (!apiKey) {
     throw new Error("AI feature is not configured. Missing OPENAI_API_KEY.");
   }
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return new OpenAI({ apiKey });
 }
 
 export interface MaterialOption {
@@ -111,7 +113,7 @@ ${materialsListText}
   "notes": "<ملاحظة عامة عن الوصفة اختيارية>"
 }`;
 
-  const response = await getOpenAI().chat.completions.create({
+  const response = await (await getOpenAI()).chat.completions.create({
     model: "gpt-4o",
     messages: [
       { role: "system", content: systemPrompt },

@@ -3602,6 +3602,14 @@ export function invalidateBusinessDayCache() {
 }
 
 /** Get the single app settings row (id=1). Returns defaults if not found. */
+/** Resolve the effective OpenAI API key: DB-stored value takes priority, falls back to env var. */
+export async function getEffectiveOpenAIApiKey(): Promise<string | null> {
+  const settings = await getAppSettings();
+  const dbKey = (settings as any)?.openaiApiKey;
+  if (dbKey && typeof dbKey === "string" && dbKey.trim()) return dbKey.trim();
+  return process.env.OPENAI_API_KEY || null;
+}
+
 export async function getAppSettings() {
   const db = await getDb();
   if (!db) return null;
@@ -3629,6 +3637,7 @@ export async function updateAppSettings(data: Partial<{
   currencySymbol: string;
   vatRate: string;
   vatEnabled: boolean;
+  openaiApiKey: string | null;
 }>) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");

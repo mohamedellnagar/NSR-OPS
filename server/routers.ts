@@ -138,6 +138,7 @@ import {
   deleteWasteLog,
   getAppSettings,
   updateAppSettings,
+  getEffectiveOpenAIApiKey,
   getAnalyticsSummary,
   getTopConsumedMaterials,
   getDailyInventoryFlow,
@@ -3018,7 +3019,12 @@ export const appRouter = router({
 
   // ─── App Settings ─────────────────────────────────────────────────────────
   settings: router({
-    get: protectedProcedure.query(() => getAppSettings()),
+    get: protectedProcedure.query(async () => {
+      const settings = await getAppSettings();
+      if (!settings) return settings;
+      const { openaiApiKey, ...rest } = settings as any;
+      return rest;
+    }),
     update: adminProcedure
       .input(z.object({
         restaurantName: z.string().min(1).optional(),
@@ -3035,8 +3041,28 @@ export const appRouter = router({
         currencySymbol: z.string().optional(),
         vatRate: z.string().optional(),
         vatEnabled: z.boolean().optional(),
+        openaiApiKey: z.string().optional(),
       }))
-      .mutation(({ input }) => updateAppSettings(input)),
+      .mutation(({ input }) => {
+        const { openaiApiKey, ...rest } = input;
+        const data: any = { ...rest };
+        if (openaiApiKey !== undefined) {
+          data.openaiApiKey = openaiApiKey.trim() ? openaiApiKey.trim() : null;
+        }
+        return updateAppSettings(data);
+      }),
+    openaiKeyStatus: adminProcedure.query(async () => {
+      const settings = await getAppSettings();
+      const dbKey = (settings as any)?.openaiApiKey as string | null | undefined;
+      const envKey = process.env.OPENAI_API_KEY || null;
+      const effective = await getEffectiveOpenAIApiKey();
+      const mask = (key: string) => (key.length > 8 ? `${key.slice(0, 4)}...${key.slice(-4)}` : "****");
+      return {
+        configured: Boolean(effective),
+        source: dbKey ? "database" : envKey ? "env" : "none",
+        masked: effective ? mask(effective) : null,
+      };
+    }),
     syncFromCloud: adminProcedure
       .mutation(async () => {
         if (!process.env.CLOUD_DATABASE_URL) {

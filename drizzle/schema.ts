@@ -491,6 +491,8 @@ export const appSettings = mysqlTable("app_settings", {
   vatEnabled: boolean("vatEnabled").default(true).notNull(),
   // COGS: Opening stock value (قيمة مخزون أول المدة)
   openingStockValue: decimal("openingStockValue", { precision: 14, scale: 2 }).default("0").notNull(),
+  // AI: OpenAI API key (used by AI Chef, material categorizer, material enhancer)
+  openaiApiKey: varchar("openaiApiKey", { length: 255 }),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 export type AppSettings = typeof appSettings.$inferSelect;
