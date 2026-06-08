@@ -363,64 +363,6 @@ async function fullReplaceTable(
   return { rows: copied, cloudRows: total, note: `✓ ${copied}/${total}` };
 }
 
-// Merge: INSERT IGNORE cloud rows into local — keeps local data intact
-// Records that exist locally are skipped (by id), new cloud records are added
-async function mergeTable(
-  cloud: mysql.Connection,
-  local: mysql.Connection,
-  table: string
-): Promise<{ rows: number; cloudRows: number; note: string }> {
-  // Check if table exists in cloud
-  const [cloudColsRows] = await cloud.query(
-    "SELECT COLUMN_NAME FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name=? ORDER BY ORDINAL_POSITION",
-    [table]
-  ) as any[];
-  const cloudCols = (cloudColsRows as any[]).map((c: any) => c.COLUMN_NAME || c.column_name);
-  if (cloudCols.length === 0)
-    return { rows: 0, cloudRows: 0, note: "الجدول غير موجود في السحابة" };
-
-  const localCols = await getLocalCols(local, table);
-  const cols = cloudCols.filter((c: string) => localCols.includes(c));
-  if (cols.length === 0)
-    return { rows: 0, cloudRows: 0, note: `لا أعمدة مشتركة` };
-
-  const [countRow] = await cloud.query(`SELECT COUNT(*) AS c FROM \`${table}\``) as any[];
-  const total = Number((countRow as any[])[0]?.c || 0);
-  if (total === 0)
-    return { rows: 0, cloudRows: 0, note: "لا بيانات في السحابة — البيانات المحلية محفوظة ✓" };
-
-  const colList = cols.map((c: string) => `\`${c}\``).join(", ");
-  let merged = 0, offset = 0;
-
-  while (offset < total) {
-    const [batchRows] = await cloud.query(
-      `SELECT ${colList} FROM \`${table}\` LIMIT ${BATCH} OFFSET ${offset}`
-    ) as any[];
-    const rows = batchRows as any[];
-    if (rows.length === 0) break;
-
-    const values = rows.map((row: any) => cols.map((c: string) => {
-      const v = row[c];
-      if (v === null || v === undefined) return null;
-      if (v instanceof Date) return v;
-      if (Buffer.isBuffer(v)) return v;
-      if (typeof v === "object") return JSON.stringify(v);
-      return v;
-    }));
-
-    try {
-      // INSERT IGNORE: skip rows that already exist (same id)
-      await local.query(`INSERT IGNORE INTO \`${table}\` (${colList}) VALUES ?`, [values]);
-      merged += rows.length;
-    } catch (e: any) {
-      return { rows: merged, cloudRows: total, note: `خطأ: ${e.message?.slice(0, 80)}` };
-    }
-    offset += rows.length;
-    if (rows.length < BATCH) break;
-  }
-  return { rows: merged, cloudRows: total, note: `✓ دُمج ${merged} من ${total} سجل سحابي` };
-}
-
 export async function smartSyncFromCloud(
   onProgress?: (msg: string) => void
 ): Promise<SmartSyncResult> {
@@ -461,22 +403,18 @@ export async function smartSyncFromCloud(
       results.push({ table: "raw_materials", strategy: "update_qty_price", rows: updated, cloudRows: (cloudRows as any[]).length, note: `✓ ${updated} مادة` });
     }
 
-    // ── 3. Kitchen production tables — MERGE to preserve local data
+    // ── 3. Kitchen tables — FULL REPLACE (حذف القديم وإضافة الجديد) لكل بيانات
+    //      المطبخ: الإنتاج، الجرد، الاستهلاك، التكلفة، المتبقي، والهدر.
     for (const t of [
       "kitchen_daily_pulls",          // الإنتاج اليومي الرئيسي
-      "kitchen_production_counts",
-    ]) {
-      onProgress?.(`مزامنة ${t}...`);
-      const r = await mergeTable(cloud, local, t);
-      results.push({ table: t, strategy: "merge", ...r });
-    }
-
-    // ── 3b. Kitchen production cost tables — FULL REPLACE (fixes wrong local cost data)
-    for (const t of [
+      "kitchen_production_counts",    // عدّادات الإنتاج
       "kitchen_daily_production",     // بيانات الإنتاج وتكلفة الوحدة (actualUnitCost)
       "kitchen_production_materials", // المواد المستهلكة في الإنتاج (تكلفة المطبخ)
+      "kitchen_item_production",      // الإنتاج اليومي للأصناف والمتبقي
+      "kitchen_inventory_counts",     // الجرد وتكلفة الاستهلاك (consumptionCost)
+      "waste_logs",                   // الهدر وتكلفته (totalCost)
     ]) {
-      onProgress?.(`مزامنة كاملة لتكلفة المطبخ — ${t}...`);
+      onProgress?.(`مزامنة كاملة لبيانات المطبخ — ${t}...`);
       const r = await syncReplaceTable(cloud, local, t);
       results.push({ table: t, strategy: "replace", ...r });
     }
@@ -488,12 +426,32 @@ export async function smartSyncFromCloud(
       results.push({ table: "daily_accounts", strategy: "replace", ...r });
     }
 
-    // ── 5. Daily production + consumption cost + waste cost — full table replace
-    for (const t of [
-      "kitchen_item_production",   // الإنتاج اليومي للأصناف
-      "kitchen_inventory_counts",  // تكلفة الاستهلاك (consumptionCost)
-      "waste_logs",                // تكلفة الهالك (totalCost)
-    ]) {
+    // ── 6. Everything else — full replace for any remaining table that exists
+    //      in both cloud and local. Skips tables already handled above and a
+    //      safety blacklist of local/environment-specific tables that must not
+    //      be overwritten from the cloud (auth, app config, WhatsApp instance
+    //      credentials, internal migration bookkeeping).
+    const SAFETY_BLACKLIST = new Set([
+      "users",               // local admin accounts / password hashes — overwriting could lock everyone out
+      "app_settings",        // local app configuration
+      "__drizzle_migrations",// internal migration bookkeeping
+      "kv_store",            // local-only runtime key/value store
+      "whatsapp_instances",  // local WhatsApp instance connection config/tokens
+      "whatsapp_settings",
+      "evolution_settings",
+      "restaurant_wa_numbers",
+    ]);
+    const alreadyHandled = new Set(results.map((r) => r.table));
+    alreadyHandled.add("raw_materials");
+
+    const [cloudTableRows] = await cloud.query(
+      "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = DATABASE() AND TABLE_TYPE = 'BASE TABLE'"
+    ) as any[];
+    const cloudTableNames: string[] = (cloudTableRows as any[]).map((r) => r.TABLE_NAME || r.table_name);
+
+    for (const t of cloudTableNames) {
+      if (alreadyHandled.has(t) || SAFETY_BLACKLIST.has(t)) continue;
+      if (!(await tableExists(local, t))) continue;
       onProgress?.(`مزامنة كاملة لـ ${t}...`);
       const r = await syncReplaceTable(cloud, local, t);
       results.push({ table: t, strategy: "replace", ...r });

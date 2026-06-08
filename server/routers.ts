@@ -3117,6 +3117,18 @@ export const appRouter = router({
           ? new URL(process.env.CLOUD_DATABASE_URL.replace(/\?.*$/, "")).host
           : null,
       })),
+    autoSyncStatus: adminProcedure
+      .query(async () => {
+        const { getAutoSyncStatus } = await import("./cloudAutoSync");
+        return getAutoSyncStatus();
+      }),
+    setAutoSyncEnabled: adminProcedure
+      .input(z.object({ enabled: z.boolean() }))
+      .mutation(async ({ input }) => {
+        const { setAutoSyncEnabled, getAutoSyncStatus } = await import("./cloudAutoSync");
+        setAutoSyncEnabled(input.enabled);
+        return getAutoSyncStatus();
+      }),
   }),
 
   // ─── Butcher Shop (ملحمة) ───────────────────────────────────────────────────

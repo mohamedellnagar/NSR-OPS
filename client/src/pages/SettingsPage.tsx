@@ -10,8 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Building2, Clock, DollarSign, Globe, Phone, Mail, MapPin, Save, Loader2, Cloud, Database, RefreshCw, AlertTriangle } from "lucide-react";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Building2, Clock, DollarSign, Globe, Phone, Mail, MapPin, Save, Loader2, AlertTriangle } from "lucide-react";
 
 const TIMEZONES = [
   { value: "Asia/Dubai", label: "الإمارات (UTC+4)" },
@@ -47,119 +46,17 @@ export default function SettingsPage() {
   });
 
   // ── Cloud Sync (TiDB → Local) ──
-  const cloudStatus = trpc.settings.cloudSyncStatus.useQuery();
-  const [showSyncConfirm, setShowSyncConfirm] = useState(false);
-  const [lastSyncResult, setLastSyncResult] = useState<{ tablesCopied: number; totalRows: number; durationMs: number } | null>(null);
+  const autoSyncStatus = trpc.settings.autoSyncStatus.useQuery(undefined, {
+    refetchInterval: 15000,
+  });
+  const setAutoSyncEnabledMut = trpc.settings.setAutoSyncEnabled.useMutation({
+    onSuccess: (r) => {
+      utils.settings.autoSyncStatus.setData(undefined, r);
+      toast.success(r.userEnabled ? "▶️ تم تشغيل المزامنة التلقائية" : "⏸️ تم إيقاف المزامنة التلقائية");
+    },
+    onError: (e) => toast.error(`فشل التغيير: ${e.message}`),
+  });
   const utils = trpc.useUtils();
-  const syncMutation = trpc.settings.syncFromCloud.useMutation({
-    onSuccess: (r: any) => {
-      setLastSyncResult({ tablesCopied: r.tablesCopied, totalRows: r.totalRows, durationMs: r.durationMs });
-      toast.success(ar
-        ? `تم التحديث: ${r.tablesCopied} جدول، ${r.totalRows} صف`
-        : `Synced: ${r.tablesCopied} tables, ${r.totalRows} rows`);
-      utils.invalidate();
-    },
-    onError: (e) => toast.error(ar ? `فشل التحديث: ${e.message}` : `Sync failed: ${e.message}`),
-  });
-
-  const [smartSyncResult, setSmartSyncResult] = useState<{ tables: { table: string; strategy: string; rows: number }[]; durationMs: number } | null>(null);
-  const smartSyncMut = trpc.settings.smartSyncFromCloud.useMutation({
-    onSuccess: (r: any) => {
-      setSmartSyncResult(r);
-      const total = r.tables.reduce((s: number, t: any) => s + t.rows, 0);
-      toast.success(`✅ تمت المزامنة الذكية — ${r.tables.length} جداول، ${total} صف`);
-      utils.invalidate();
-    },
-    onError: (e) => toast.error(`فشلت المزامنة: ${e.message}`),
-  });
-
-  // File-based import
-  // Excel template download
-  const templateQuery = trpc.settings.downloadSyncTemplate.useQuery(undefined, { enabled: false });
-  function downloadTemplate() {
-    templateQuery.refetch().then(r => {
-      if (!r.data) return;
-      const link = document.createElement("a");
-      link.href = `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${r.data.base64}`;
-      link.download = r.data.filename;
-      link.click();
-    });
-  }
-
-  // Excel import
-  const [excelImportResult, setExcelImportResult] = useState<{ tables: any[]; durationMs: number } | null>(null);
-  const [excelImportLoading, setExcelImportLoading] = useState(false);
-  const excelImportMut = trpc.settings.importSyncExcel.useMutation({
-    onSuccess: (r: any) => {
-      setExcelImportResult(r);
-      const total = r.tables.reduce((s: number, t: any) => s + t.rows, 0);
-      toast.success(`✅ تم الاستيراد — ${total} صف`);
-      utils.invalidate();
-      setExcelImportLoading(false);
-    },
-    onError: (e) => { toast.error(`فشل الاستيراد: ${e.message}`); setExcelImportLoading(false); },
-  });
-
-  function handleExcelImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setExcelImportLoading(true);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const base64 = (ev.target?.result as string).split(",")[1];
-      excelImportMut.mutate({ base64 });
-    };
-    reader.readAsDataURL(file);
-    e.target.value = "";
-  }
-
-  const [importResult, setImportResult] = useState<{ tables: any[]; durationMs: number } | null>(null);
-  const [importLoading, setImportLoading] = useState(false);
-  const importMut = trpc.settings.importSyncFile.useMutation({
-    onSuccess: (r: any) => {
-      setImportResult(r);
-      const total = r.tables.reduce((s: number, t: any) => s + t.rows, 0);
-      toast.success(`✅ تم الاستيراد — ${total} صف`);
-      utils.invalidate();
-    },
-    onError: (e) => { toast.error(`فشل الاستيراد: ${e.message}`); setImportLoading(false); },
-  });
-
-  const [manusUrl, setManusUrl] = useState(() => localStorage.getItem("manusUrl") || "");
-
-  function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImportLoading(true);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const payload = JSON.parse(ev.target?.result as string);
-        importMut.mutate({ payload });
-      } catch {
-        toast.error("ملف JSON غير صحيح");
-        setImportLoading(false);
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  }
-
-  async function handleFetchFromManus() {
-    if (!manusUrl.trim()) { toast.error("أدخل رابط Manus أولاً"); return; }
-    localStorage.setItem("manusUrl", manusUrl.trim());
-    setImportLoading(true);
-    try {
-      const base = manusUrl.trim().replace(/\/$/, "");
-      const res  = await fetch(`${base}/api/export-sync-data`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const payload = await res.json();
-      importMut.mutate({ payload });
-    } catch (e: any) {
-      toast.error(`فشل الجلب: ${e.message}`);
-      setImportLoading(false);
-    }
-  }
 
   const [form, setForm] = useState({
     restaurantName: "",
@@ -452,260 +349,83 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* ─── Excel Sync (Template → Manus → Import) ─── */}
+      {/* ─── Auto Sync Status (runs every minute in background) ─── */}
       <Card className="border-emerald-200/70 bg-emerald-50/30 dark:bg-emerald-950/10">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Database className="h-5 w-5 text-emerald-600" />
-            مزامنة عبر Excel
-          </CardTitle>
+          <div className="flex items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock className="h-5 w-5 text-emerald-600" />
+              المزامنة التلقائية (كل دقيقة)
+            </CardTitle>
+            {autoSyncStatus.data?.configured && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  {autoSyncStatus.data?.userEnabled ? "مفعّلة" : "متوقفة"}
+                </span>
+                <Switch
+                  checked={autoSyncStatus.data?.userEnabled ?? false}
+                  disabled={setAutoSyncEnabledMut.isPending || autoSyncStatus.isLoading}
+                  onCheckedChange={(checked) => setAutoSyncEnabledMut.mutate({ enabled: checked })}
+                />
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="text-sm space-y-2">
-            <p className="font-medium">خطوات المزامنة:</p>
-            <ol className="list-decimal list-inside space-y-1.5 text-xs text-muted-foreground">
-              <li>حمّل نموذج Excel من هنا</li>
-              <li>أرسله لـ Manus AI واطلب منه: <span className="font-mono bg-muted px-1 rounded text-foreground">"عبّئ هذا النموذج ببيانات قاعدة البيانات"</span></li>
-              <li>ارفع الملف المعبّأ هنا</li>
-            </ol>
-          </div>
-
-          {excelImportResult && (
-            <div className="text-xs border border-border rounded-md p-2.5 bg-card space-y-1">
-              <p className="font-medium text-emerald-600">✅ آخر استيراد ({(excelImportResult.durationMs / 1000).toFixed(1)}s)</p>
-              {excelImportResult.tables.map((t: any) => (
-                <div key={t.table} className="flex justify-between text-muted-foreground">
-                  <span>{t.table}</span>
-                  <span className="font-mono">{t.rows} صف — {t.strategy}</span>
-                </div>
-              ))}
+          {!autoSyncStatus.data?.configured ? (
+            <div className="flex items-center gap-2 p-2.5 rounded-md bg-muted text-sm text-muted-foreground">
+              <AlertTriangle className="h-4 w-4" />
+              المزامنة التلقائية غير مفعّلة (تأكد من ضبط CLOUD_DATABASE_URL)
             </div>
-          )}
-
-          <div className="flex flex-wrap gap-2 pt-1">
-            <Button
-              onClick={downloadTemplate}
-              disabled={templateQuery.isFetching}
-              variant="outline"
-              className="gap-2 border-emerald-600 text-emerald-700 hover:bg-emerald-50"
-            >
-              {templateQuery.isFetching
-                ? <Loader2 className="h-4 w-4 animate-spin" />
-                : <RefreshCw className="h-4 w-4" />}
-              ① تحميل النموذج
-            </Button>
-            <label className={`cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium text-white transition-colors ${excelImportLoading ? "bg-gray-400 cursor-not-allowed" : "bg-emerald-600 hover:bg-emerald-700"}`}>
-              {excelImportLoading
-                ? <><Loader2 className="h-4 w-4 animate-spin" /> جاري الاستيراد...</>
-                : <><RefreshCw className="h-4 w-4" /> ③ رفع الملف المعبّأ</>}
-              <input type="file" accept=".xlsx,.xls" className="hidden" disabled={excelImportLoading} onChange={handleExcelImport} />
-            </label>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ─── File-based Import ─── */}
-      <Card className="border-green-200/70 bg-green-50/30 dark:bg-green-950/10">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Database className="h-5 w-5 text-green-600" />
-            استيراد البيانات من ملف (بديل المزامنة)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {/* Manus URL input */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">رابط الـ app على Manus</label>
-            <div className="flex gap-2">
-              <input
-                value={manusUrl}
-                onChange={e => setManusUrl(e.target.value)}
-                placeholder="https://matjari-inv-jz9zqe8j.manus.space"
-                className="flex-1 text-xs border border-border rounded-md px-3 py-2 bg-background focus:outline-none focus:ring-1 focus:ring-green-500 font-mono"
-              />
-              <button
-                onClick={handleFetchFromManus}
-                disabled={importLoading}
-                className={`px-3 py-2 rounded-md text-xs font-medium text-white transition-colors ${importLoading ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
-              >
-                {importLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : "جلب البيانات"}
-              </button>
+          ) : !autoSyncStatus.data?.userEnabled ? (
+            <div className="flex items-center gap-2 p-2.5 rounded-md bg-muted text-sm text-muted-foreground">
+              <AlertTriangle className="h-4 w-4" />
+              المزامنة التلقائية متوقفة الآن — استخدم المفتاح أعلاه لتشغيلها
             </div>
-            <p className="text-xs text-muted-foreground">أو ارفع ملف JSON سبق تحميله:</p>
-          </div>
-
-          {importResult && (
-            <div className="text-xs border border-border rounded-md p-2.5 bg-card space-y-1">
-              <p className="font-medium text-emerald-600">✅ آخر استيراد ({(importResult.durationMs / 1000).toFixed(1)}s)</p>
-              {importResult.tables.map((t: any) => (
-                <div key={t.table} className="flex justify-between text-muted-foreground">
-                  <span>{t.table}</span>
-                  <span className="font-mono">{t.rows} صف</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-center gap-3">
-            <label className={`cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium border transition-colors ${importLoading ? "opacity-50 cursor-not-allowed border-border text-muted-foreground" : "border-green-600 text-green-700 hover:bg-green-50"}`}>
-              {importLoading
-                ? <><Loader2 className="h-4 w-4 animate-spin" /> جاري الاستيراد...</>
-                : <><RefreshCw className="h-4 w-4" /> رفع ملف .json</>}
-              <input type="file" accept=".json" className="hidden" disabled={importLoading} onChange={handleImportFile} />
-            </label>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ─── Smart Cloud Sync ─── */}
-      <Card className="border-blue-200/70 bg-blue-50/30 dark:bg-blue-950/10">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Cloud className="h-5 w-5 text-blue-600" />
-            مزامنة ذكية من السحابة
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="text-sm text-muted-foreground space-y-1">
-            <p>تحدّث فقط البيانات المحددة دون المساس بباقي النظام:</p>
-            <ul className="list-disc list-inside space-y-0.5 text-xs">
-              <li><span className="font-medium text-foreground">الفواتير</span> — حذف القديم وإضافة الجديد</li>
-              <li><span className="font-medium text-foreground">المواد الخام</span> — تحديث الكميات وآخر الأسعار فقط (الأسماء والرموز لا تتغير)</li>
-              <li><span className="font-medium text-foreground">إنتاج المطبخ</span> — حذف القديم وإضافة الجديد</li>
-              <li><span className="font-medium text-foreground">الحسابات اليومية</span> — حذف القديم وإضافة الجديد</li>
-            </ul>
-          </div>
-
-          {smartSyncResult && (
-            <div className="text-xs border border-border rounded-md p-2.5 bg-card space-y-1">
-              <p className="font-medium text-emerald-600">✅ آخر مزامنة ذكية</p>
-              {smartSyncResult.tables.map((t: any) => (
-                <div key={t.table} className="flex justify-between text-muted-foreground">
-                  <span>{t.table}</span>
-                  <span className="font-mono">{t.rows} صف — {t.strategy}</span>
-                </div>
-              ))}
-              <p className="text-muted-foreground">{(smartSyncResult.durationMs / 1000).toFixed(1)}s</p>
-            </div>
-          )}
-
-          <div className="flex justify-end pt-1">
-            <Button
-              onClick={() => smartSyncMut.mutate()}
-              disabled={smartSyncMut.isPending || !cloudStatus.data?.enabled}
-              className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {smartSyncMut.isPending
-                ? <><Loader2 className="h-4 w-4 animate-spin" /> جاري المزامنة الذكية...</>
-                : <><RefreshCw className="h-4 w-4" /> مزامنة ذكية من السحابة</>}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ─── Cloud Sync (TiDB → Local) ─── */}
-      <Card className="border-amber-200/70 bg-amber-50/30 dark:bg-amber-950/10">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Cloud className="h-5 w-5 text-amber-600" />
-            {ar ? "مزامنة البيانات من السحابة" : "Sync Data From Cloud"}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-100/60 dark:bg-amber-950/30 border border-amber-300/60 text-sm">
-            <AlertTriangle className="h-4 w-4 text-amber-700 mt-0.5 flex-shrink-0" />
-            <div className="space-y-1">
-              <p className="font-medium text-amber-900 dark:text-amber-200">
-                {ar ? "سيتم استبدال البيانات المحلية بالكامل ببيانات السحابة" : "All local data will be replaced with the cloud data"}
-              </p>
-              <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
-                {ar ? "البيانات الموجودة على السحابة لن تتأثر — العملية read-only من ناحيتها. أي تعديلات محلية لم تُرفع للسحابة ستُفقد." : "Cloud data is not affected — this is read-only from the cloud side. Any local changes that haven't been pushed to the cloud will be lost."}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            <div className="flex items-center gap-2 p-2.5 rounded-md bg-card border border-border">
-              <Database className="h-4 w-4 text-blue-500" />
-              <div>
-                <div className="text-xs text-muted-foreground">{ar ? "المصدر (سحابي)" : "Source (cloud)"}</div>
-                <div className="font-mono text-xs truncate">
-                  {cloudStatus.data?.cloudHost || (ar ? "غير مُعد" : "Not configured")}
-                </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div className="flex items-center gap-2 p-2.5 rounded-md bg-card border border-border">
+                {autoSyncStatus.data?.running
+                  ? <Loader2 className="h-4 w-4 text-emerald-600 animate-spin" />
+                  : <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 inline-block" />}
+                <span>
+                  {autoSyncStatus.data?.running ? "جاري المزامنة الآن..." : "تعمل في الخلفية"}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 p-2.5 rounded-md bg-card border border-border">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">
+                  آخر تشغيل: {autoSyncStatus.data?.lastRunAt
+                    ? new Date(autoSyncStatus.data.lastRunAt).toLocaleTimeString("ar-EG")
+                    : "لم تبدأ بعد"}
+                </span>
               </div>
             </div>
-            <div className="flex items-center gap-2 p-2.5 rounded-md bg-card border border-border">
-              <Database className="h-4 w-4 text-emerald-500" />
-              <div>
-                <div className="text-xs text-muted-foreground">{ar ? "الهدف (محلي)" : "Target (local)"}</div>
-                <div className="font-mono text-xs truncate">localhost:3306</div>
-              </div>
-            </div>
-          </div>
-
-          {lastSyncResult && (
-            <div className="text-xs text-muted-foreground border border-border rounded-md p-2.5 bg-card space-y-1">
-              <p className="font-medium text-emerald-600">
-                ✅ {lastSyncResult.tablesCopied} {ar ? "جدول" : "tables"} · {lastSyncResult.totalRows.toLocaleString()} {ar ? "صف" : "rows"} · {(lastSyncResult.durationMs / 1000).toFixed(1)}s
-              </p>
-              {(lastSyncResult as any).tables?.map((t: any) => (
-                <div key={t.table} className="flex justify-between">
-                  <span>{t.table}</span>
-                  <span className={`font-mono ${t.rows === 0 ? "text-amber-500" : "text-emerald-600"}`}>
-                    {t.rows} صف {t.note ? `— ${t.note}` : ""}
-                  </span>
-                </div>
-              ))}
-            </div>
           )}
 
-          <div className="flex justify-end pt-1">
-            <Button
-              onClick={() => setShowSyncConfirm(true)}
-              disabled={syncMutation.isPending || !cloudStatus.data?.enabled}
-              variant="default"
-              className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              {syncMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              {syncMutation.isPending
-                ? (ar ? "جاري التحديث..." : "Syncing...")
-                : (ar ? "تحديث البيانات من السحابة" : "Sync from Cloud")}
-            </Button>
-          </div>
+          {autoSyncStatus.data?.lastResult && (
+            <div className={`text-xs border rounded-md p-2.5 space-y-1 ${
+              autoSyncStatus.data.lastResult.ok
+                ? "border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/20"
+                : "border-red-200 bg-red-50/60 dark:bg-red-950/20"
+            }`}>
+              {autoSyncStatus.data.lastResult.ok ? (
+                <p className="text-emerald-700 dark:text-emerald-400">
+                  ✅ آخر مزامنة ناجحة — {autoSyncStatus.data.lastResult.tables} جداول، {autoSyncStatus.data.lastResult.rows} صف
+                  {" "}في {(autoSyncStatus.data.lastResult.durationMs / 1000).toFixed(1)} ثانية
+                  {autoSyncStatus.data.lastSuccessAt && (
+                    <> — الساعة {new Date(autoSyncStatus.data.lastSuccessAt).toLocaleTimeString("ar-EG")}</>
+                  )}
+                </p>
+              ) : (
+                <p className="text-red-700 dark:text-red-400">
+                  ✗ فشلت آخر محاولة مزامنة: {autoSyncStatus.data.lastResult.error}
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      <AlertDialog open={showSyncConfirm} onOpenChange={setShowSyncConfirm}>
-        <AlertDialogContent dir={ar ? "rtl" : "ltr"}>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
-              {ar ? "تأكيد المزامنة" : "Confirm Sync"}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                {ar
-                  ? "هذه العملية ستحذف كل البيانات المحلية وتستبدلها بنسخة طازجة من السحابة. هل أنت متأكد؟"
-                  : "This will delete all local data and replace it with a fresh copy from the cloud. Are you sure?"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {ar
-                  ? "العملية قد تستغرق دقيقة إلى دقيقتين بحسب حجم البيانات."
-                  : "This may take 1-2 minutes depending on data size."}
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className={ar ? "flex-row-reverse" : ""}>
-            <AlertDialogCancel>{ar ? "إلغاء" : "Cancel"}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => { setShowSyncConfirm(false); syncMutation.mutate(); }}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              {ar ? "نعم، حدّث الآن" : "Yes, sync now"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Save button at bottom too */}
       <div className="flex justify-end pb-6">
