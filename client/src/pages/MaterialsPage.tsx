@@ -92,6 +92,7 @@ export default function MaterialsPage() {
   });
   const materials = materialsQuery.data;
   const { isLoading, error, refetch } = materialsQuery;
+  const inventoryKpisQuery = trpc.materials.kpis.useQuery();
 
   const { data: categories } = trpc.categories.list.useQuery();
 
@@ -243,12 +244,12 @@ export default function MaterialsPage() {
   }, [activeList]);
 
   // ── Stock value split: always raw vs semi regardless of active tab ──────────
-  const { rawStockValue, semiStockValue } = useMemo(() => {
-    let raw = 0, semi = 0;
-    rawList.forEach((m: any) => { raw += estimatedStockValue(m.currentQuantity, m.lastPurchasePrice); });
-    semiList.forEach((m: any) => { semi += estimatedStockValue(m.currentQuantity, m.lastPurchasePrice); });
-    return { rawStockValue: raw, semiStockValue: semi };
-  }, [rawList, semiList]);
+  // Sourced from the backend (getInventoryKpis) to match the dashboard exactly:
+  //  - raw materials: qty × last purchase price (qty > 0 only)
+  //  - semi-finished: open-pulled qty × actual recipe cost (NOT last purchase
+  //    price, which is meaningless for items produced in-house, not bought)
+  const rawStockValue = inventoryKpisQuery.data?.rawMaterialsTotalValue ?? 0;
+  const semiStockValue = inventoryKpisQuery.data?.semiFinishedTotalValue ?? 0;
 
   // ── Renderers ─────────────────────────────────────────────────────────────
   const renderStatusBadge = (m: any) => {
