@@ -391,7 +391,7 @@ export async function smartSyncFromCloud(
       const cloudCols = await getCloudCols(cloud, "raw_materials");
       const localCols = await getLocalCols(local, "raw_materials");
       const sharedCols = cloudCols.filter(c => localCols.includes(c));
-      const updateCols = ["currentQuantity", "lastPurchasePrice", "averageCost", "minimumQuantity"]
+      const updateCols = ["currentQuantity", "lastPurchasePrice", "averageCost", "minimumQuantity", "materialType"]
         .filter(c => localCols.includes(c));
 
       const [cloudRows] = await cloud.query(
