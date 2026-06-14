@@ -927,6 +927,22 @@ export const dailyAccounts = mysqlTable(
 export type DailyAccount = typeof dailyAccounts.$inferSelect;
 export type InsertDailyAccount = typeof dailyAccounts.$inferInsert;
 
+// ─── Report Templates (WhatsApp reports) ───────────────────────────────────────
+export const reportTemplates = mysqlTable("report_templates", {
+  id: int("id").autoincrement().primaryKey(),
+  reportType: varchar("reportType", { length: 50 }).notNull(),
+  headerText: text("headerText"),
+  footerText: text("footerText"),
+  bodyText: text("bodyText"),
+  includeDate: boolean("includeDate").default(true),
+  customFields: json("customFields"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow(),
+  name: varchar("name", { length: 256 }),
+  full_text: text("full_text"),
+});
+export type ReportTemplate = typeof reportTemplates.$inferSelect;
+export type InsertReportTemplate = typeof reportTemplates.$inferInsert;
+
 // ── إقفالات المخزون الشهرية (تجميد قيمة المخزون آخر كل شهر) ──────────────────
 export const monthlyStockSnapshots = mysqlTable(
   "monthly_stock_snapshots",
