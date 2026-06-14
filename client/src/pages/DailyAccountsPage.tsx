@@ -267,6 +267,7 @@ export default function DailyAccountsPage() {
   const [openingStockInput, setOpeningStockInput] = useState("");
   const [openingStockDateInput, setOpeningStockDateInput] = useState("");
   const [includeFixed, setIncludeFixed] = useState(true);
+  const [showCloseMonthConfirm, setShowCloseMonthConfirm] = useState(false);
 
   // ─── Financial KPI Query ─────────────────────────────────────────────────
   const { data: kpi, isLoading: kpiLoading } = trpc.dailyAccounts.financialKpi.useQuery(
@@ -278,6 +279,13 @@ export default function DailyAccountsPage() {
       toast.success("تم تحديث مخزون أول المدة");
       utils.dailyAccounts.financialKpi.invalidate();
       setEditingOpeningStock(false);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const closeMonthMut = trpc.dailyAccounts.closeMonth.useMutation({
+    onSuccess: () => {
+      toast.success("تم إقفال الشهر وتجميد قيمة المخزون");
+      utils.dailyAccounts.financialKpi.invalidate();
     },
     onError: (e) => toast.error(e.message),
   });
@@ -297,6 +305,13 @@ export default function DailyAccountsPage() {
 
   // ─── Summary KPIs ───────────────────────────────────────────────────
   const monthTotalSales = accounts.reduce((s, a) => s + a.totalSales, 0);
+  const monthTotalCash = accounts.reduce((s, a) => s + (parseFloat(a.salesCash) || 0), 0);
+  const monthTotalSupply = accounts.reduce((s, a) =>
+    s + (parseFloat(a.supplyToRestaurant) || 0) + (parseFloat(a.supplyToManagement) || 0) + (parseFloat(a.supplyExtra) || 0), 0);
+  const restaurantReceived = monthTotalCash + monthTotalSupply;
+  const restaurantPercent = monthTotalSales > 0 ? (restaurantReceived / monthTotalSales) * 100 : 0;
+  const restaurantExpected = monthTotalSales / 2 - monthTotalCash;
+  const restaurantDiff = monthTotalSupply - restaurantExpected;
   const monthTotalFixed = accounts.reduce((s, a) => s + parseFloat(a.expensesFixed), 0);
   const monthTotalExpenses = (() => {
     // From registered days
@@ -360,17 +375,33 @@ export default function DailyAccountsPage() {
                 <span className="text-xs text-muted-foreground mr-2">{getMonthLabel(selectedYear, selectedMonth)}</span>
               </div>
             </div>
-            <button
-              onClick={() => setIncludeFixed(!includeFixed)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 border ${
-                includeFixed
-                  ? 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800'
-                  : 'bg-muted text-muted-foreground border-border'
-              }`}
-            >
-              {includeFixed ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
-              <span>تضمين المصروفات الثابتة</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {kpi?.isMonthClosed ? (
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">
+                  <Check className="w-3.5 h-3.5" />
+                  مُقفل بتاريخ {kpi.monthClosedDate}
+                </span>
+              ) : (
+                <button
+                  onClick={() => setShowCloseMonthConfirm(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 border bg-muted text-muted-foreground border-border hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 dark:hover:bg-amber-950/40"
+                >
+                  <Package className="w-4 h-4" />
+                  <span>إقفال الشهر</span>
+                </button>
+              )}
+              <button
+                onClick={() => setIncludeFixed(!includeFixed)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all duration-200 border ${
+                  includeFixed
+                    ? 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800'
+                    : 'bg-muted text-muted-foreground border-border'
+                }`}
+              >
+                {includeFixed ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                <span>تضمين المصروفات الثابتة</span>
+              </button>
+            </div>
           </div>
 
           {/* ── جسم الملخص ── */}
@@ -439,6 +470,7 @@ export default function DailyAccountsPage() {
                 <p className="text-lg font-bold text-orange-700 dark:text-orange-200">{fmt(kpi?.cogsValue ?? 0)} <span className="text-xs font-normal">د.إ</span></p>
                 <div className="text-[10px] text-orange-500/70 dark:text-orange-400/60 mt-0.5 space-y-0.5">
                   <div>أول: {fmt(kpi?.openingStockValue ?? 0)} + تشغيلية: {fmt(kpi?.totalOpEx ?? 0)}</div>
+                  <div className="ps-3">(مدفوع: {fmt(kpi?.opPaid ?? 0)} / مؤجل: {fmt(kpi?.opDeferred ?? 0)})</div>
                   <div>− مخزون آخر: {fmt(kpi?.currentInventoryValue ?? 0)}</div>
                 </div>
               </div>
@@ -482,7 +514,7 @@ export default function DailyAccountsPage() {
 
             {/* ── فاصل ── */}
             <div className="border-t border-dashed border-border/50 pt-3">
-              {/* ── الصف الثالث: المديونية والمخزون والوضع الإجمالي ── */}
+              {/* ── الصف الثالث: المديونية والمخزون ونسبة المطعم ── */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
 
                 {/* إجمالي المديونية */}
@@ -516,31 +548,25 @@ export default function DailyAccountsPage() {
                   </div>
                 </div>
 
-                {/* الوضع المالي الإجمالي */}
-                {(() => {
-                  const netPos = (kpi?.openingStockValue ?? 0) + (kpi?.currentInventoryValue ?? 0) + (includeFixed ? (kpi?.netProfit ?? 0) : (kpi?.profitBeforeFixed ?? 0)) - (kpi?.totalDebt ?? 0);
-                  const isPos = netPos >= 0;
-                  return (
-                    <div className={`rounded-xl border p-3 ${
-                      isPos
-                        ? 'border-indigo-200 dark:border-indigo-800/50 bg-indigo-50 dark:bg-indigo-950/30'
-                        : 'border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/30'
-                    }`}>
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <div className={`h-6 w-6 rounded-md flex items-center justify-center ${
-                          isPos ? 'bg-indigo-200 dark:bg-indigo-800/50' : 'bg-red-200 dark:bg-red-800/50'
-                        }`}>
-                          <BarChart3 className={`w-3 h-3 ${isPos ? 'text-indigo-600 dark:text-indigo-300' : 'text-red-600 dark:text-red-300'}`} />
-                        </div>
-                        <span className={`text-xs font-semibold ${isPos ? 'text-indigo-700 dark:text-indigo-300' : 'text-red-700 dark:text-red-300'}`}>الوضع المالي الإجمالي</span>
-                      </div>
-                      <p className={`text-lg font-bold ${isPos ? 'text-indigo-700 dark:text-indigo-200' : 'text-red-700 dark:text-red-200'}`}>
-                        {netPos < 0 ? '−' : ''}{fmt(Math.abs(netPos))} <span className="text-xs font-normal">د.إ</span>
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">مخزون أول + مخزون حالي + ربح − ديون</p>
+                {/* نسبة المطعم */}
+                <div className="rounded-xl border border-cyan-200 dark:border-cyan-800/50 bg-cyan-50 dark:bg-cyan-950/30 p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <div className="h-6 w-6 rounded-md bg-cyan-200 dark:bg-cyan-800/50 flex items-center justify-center">
+                      <Wallet className="w-3 h-3 text-cyan-600 dark:text-cyan-300" />
                     </div>
-                  );
-                })()}
+                    <span className="text-xs font-semibold text-cyan-700 dark:text-cyan-300">نسبة المطعم</span>
+                  </div>
+                  <p className="text-lg font-bold text-cyan-700 dark:text-cyan-200">{restaurantPercent.toFixed(1)}%</p>
+                  <p className="text-[10px] text-cyan-600/70 dark:text-cyan-400/60 mt-0.5">
+                    استلام: {fmt(restaurantReceived)} (نقدي {fmt(monthTotalCash)} + توريدات {fmt(monthTotalSupply)})
+                  </p>
+                  <p className="text-[10px] text-cyan-600/70 dark:text-cyan-400/60 mt-0.5">
+                    المفروض: {fmt(restaurantExpected)} (مبيعات÷2 − نقدي)
+                  </p>
+                  <p className={`text-xs font-bold mt-1 ${restaurantDiff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {restaurantDiff >= 0 ? '+' : '−'}{fmt(Math.abs(restaurantDiff))} د.إ — {restaurantDiff >= 0 ? 'للمطعم' : 'على المطعم'}
+                  </p>
+                </div>
 
               </div>
             </div>
@@ -771,6 +797,31 @@ export default function DailyAccountsPage() {
         onSaved={() => refetch()}
       />
 
+
+      {/* Close Month Confirmation */}
+      <AlertDialog open={showCloseMonthConfirm} onOpenChange={setShowCloseMonthConfirm}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد إقفال الشهر</AlertDialogTitle>
+            <AlertDialogDescription>
+              سيتم تجميد قيمة المخزون الحالي ({fmt(kpi?.currentInventoryValue ?? 0)} د.إ) كمخزون آخر المدة لشهر {getMonthLabel(selectedYear, selectedMonth)}،
+              وستصبح هي مخزون أول المدة للشهر التالي. كما سيتم ترحيل إجمالي المديونية الحالي ({fmt(kpi?.totalDebt ?? 0)} د.إ) كمديونية هذا الشهر.
+              لا يمكن التراجع عن هذا الإجراء.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                closeMonthMut.mutate({ year: selectedYear, month: selectedMonth });
+                setShowCloseMonthConfirm(false);
+              }}
+            >
+              تأكيد الإقفال
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Delete Confirmation */}
       <AlertDialog open={deleteId !== null} onOpenChange={(o) => !o && setDeleteId(null)}>

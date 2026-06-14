@@ -927,6 +927,31 @@ export const dailyAccounts = mysqlTable(
 export type DailyAccount = typeof dailyAccounts.$inferSelect;
 export type InsertDailyAccount = typeof dailyAccounts.$inferInsert;
 
+// ── إقفالات المخزون الشهرية (تجميد قيمة المخزون آخر كل شهر) ──────────────────
+export const monthlyStockSnapshots = mysqlTable(
+  "monthly_stock_snapshots",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    year: int("year").notNull(),
+    month: int("month").notNull(),
+    rawMaterialsValue: decimal("rawMaterialsValue", { precision: 14, scale: 2 }).notNull().default("0"),
+    butcherValue: decimal("butcherValue", { precision: 14, scale: 2 }).notNull().default("0"),
+    manufacturedValue: decimal("manufacturedValue", { precision: 14, scale: 2 }).notNull().default("0"),
+    totalValue: decimal("totalValue", { precision: 14, scale: 2 }).notNull().default("0"),
+    supplierDebt: decimal("supplierDebt", { precision: 14, scale: 2 }).notNull().default("0"),
+    freeDebt: decimal("freeDebt", { precision: 14, scale: 2 }).notNull().default("0"),
+    totalDebt: decimal("totalDebt", { precision: 14, scale: 2 }).notNull().default("0"),
+    snapshotDate: varchar("snapshotDate", { length: 10 }).notNull(),
+    createdBy: int("createdBy").references(() => users.id),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (t) => [
+    index("idx_mss_year_month").on(t.year, t.month),
+  ]
+);
+export type MonthlyStockSnapshot = typeof monthlyStockSnapshots.$inferSelect;
+export type InsertMonthlyStockSnapshot = typeof monthlyStockSnapshots.$inferInsert;
+
 // ─── Kitchen Daily Inventory Count (جرد المطبخ اليومي) ───────────────────────
 // Each row = one material counted on one date
 export const kitchenInventoryCounts = mysqlTable(

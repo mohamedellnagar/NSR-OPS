@@ -171,6 +171,7 @@ import {
   getAllInvoicesUnified,
   getFinancialKpi,
   updateOpeningStock,
+  closeMonth,
   getInvoiceItemNames,
   getMaterialLedger,
   getAllRecipeItemsForExport,
@@ -4365,6 +4366,10 @@ ${statsContext}
         openingStockDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
       }))
       .mutation(({ input }) => updateOpeningStock(input.openingStockValue, input.openingStockDate)),
+
+    closeMonth: warehouseProcedure
+      .input(z.object({ year: z.number(), month: z.number().min(1).max(12) }))
+      .mutation(({ input, ctx }) => closeMonth(input.year, input.month, ctx.user.id)),
     resendReport: protectedProcedure
       .input(z.object({ accountDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }))
       .mutation(async ({ input }) => {
