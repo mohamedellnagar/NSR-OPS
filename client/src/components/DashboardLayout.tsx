@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { parseUserPagePermissions, getPageAccess, type PagePermissions } from "@/lib/permissions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -218,17 +219,13 @@ function DashboardLayoutContent({
   const isMobile = useIsMobile();
 
   // ── Permission filtering ───────────────────────────────────────────────────
-  const allowedPages: string[] | null = (() => {
-    if (!user || (user as any).role === "admin") return null; // admin sees all
-    const u = user as any;
-    if (!u.allowedPages) return null;
-    try { return JSON.parse(u.allowedPages) as string[]; } catch { return null; }
-  })();
+  const pagePermissions: PagePermissions | null =
+    !user || (user as any).role === "admin" ? null : parseUserPagePermissions((user as any).allowedPages);
 
   const visibleGroups = menuGroups.map(group => ({
     ...group,
     items: group.items.filter(item =>
-      allowedPages === null || allowedPages.includes(item.pageKey)
+      getPageAccess(pagePermissions, item.pageKey) !== null
     ),
   })).filter(group => group.items.length > 0);
 

@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { Pagination, usePagination } from "@/components/Pagination";
+import { parseUserPagePermissions, type PagePermissions } from "@/lib/permissions";
 
 type Role = "admin" | "warehouse_manager" | "viewer";
 
@@ -33,6 +34,9 @@ const ALL_PAGES = [
   { key: "menuOfferDesigner", labelAr: "مصمم العروض",              labelEn: "Menu Offer Designer" },
   { key: "foodCost",           labelAr: "Food Cost",                    labelEn: "Food Cost" },
   { key: "menu",               labelAr: "المنيو",                       labelEn: "Menu" },
+  { key: "menuImport",         labelAr: "استيراد المنيو",               labelEn: "Menu Import" },
+  { key: "priceComparison",    labelAr: "مقارنة الأسعار",               labelEn: "Price Comparison" },
+  { key: "monthlyPayments",    labelAr: "الدفعات الشهرية",              labelEn: "Monthly Payments" },
   { key: "consumption",        labelAr: "استهلاك المطبخ",           labelEn: "Consumption" },
   { key: "kitchenConsumptionReport", labelAr: "تقرير استهلاك المطبخ",  labelEn: "Kitchen Consumption Report" },
   { key: "sales",              labelAr: "المبيعات",                    labelEn: "Sales" },
@@ -44,6 +48,7 @@ const ALL_PAGES = [
   { key: "whatsappReports",    labelAr: "تقارير WhatsApp",             labelEn: "WhatsApp Reports" },
   { key: "waChats",             labelAr: "شات واتساب",                  labelEn: "WhatsApp Chats" },
   { key: "waNumbers",           labelAr: "أرقام المطعم",                 labelEn: "Restaurant Numbers" },
+  { key: "waAnalytics",         labelAr: "لوحة تحليلات واتساب",          labelEn: "WhatsApp Analytics" },
   { key: "supplierItemsReport",labelAr: "تقرير الموردين",           labelEn: "Supplier Items Report" },
   { key: "alerts",            labelAr: "التنبيهات",               labelEn: "Alerts" },
   { key: "reports",           labelAr: "التقارير",                labelEn: "Reports" },
@@ -65,7 +70,6 @@ const ALL_PAGES = [
   { key: "posWaiter",         labelAr: "الويتر",                    labelEn: "Waiter" },
   { key: "posKitchen",        labelAr: "شاشة المطبخ",               labelEn: "Kitchen Display" },
   { key: "posServiceStock",   labelAr: "إعداد الإنتاج اليومي",     labelEn: "Daily Production Setup" },
-  { key: "posCustomers",      labelAr: "عملاء التوصيل",             labelEn: "Delivery Customers" },
 ];
 
 const ROLE_CONFIG: Record<Role, { icon: React.ReactNode; color: string; label: { ar: string; en: string } }> = {
@@ -98,7 +102,7 @@ export default function UsersPage() {
   const [editUser, setEditUser] = useState<UserRow | null>(null);
   const [form, setForm] = useState({
     name: "", email: "", password: "", role: "viewer" as Role,
-    allowedPages: ALL_PAGES.map(p => p.key) as string[],
+    allowedPages: Object.fromEntries(ALL_PAGES.map(p => [p.key, "edit"])) as PagePermissions,
   });
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [expandedUser, setExpandedUser] = useState<number | null>(null);
@@ -121,15 +125,17 @@ export default function UsersPage() {
     onError: (e) => toast.error(e.message),
   });
 
-  const parsePages = (u: UserRow): string[] | null => {
+  const parsePages = (u: UserRow): PagePermissions | null => {
     if (u.role === "admin") return null;
-    if (!u.allowedPages) return ALL_PAGES.map(p => p.key);
-    try { return JSON.parse(u.allowedPages); } catch { return ALL_PAGES.map(p => p.key); }
+    const parsed = parseUserPagePermissions(u.allowedPages);
+    return parsed ?? allPagesEdit();
   };
+
+  const allPagesEdit = (): PagePermissions => Object.fromEntries(ALL_PAGES.map(p => [p.key, "edit"]));
 
   const openCreate = () => {
     setEditUser(null);
-    setForm({ name: "", email: "", password: "", role: "viewer", allowedPages: ALL_PAGES.map(p => p.key) });
+    setForm({ name: "", email: "", password: "", role: "viewer", allowedPages: allPagesEdit() });
     setShowDialog(true);
   };
 
@@ -138,24 +144,28 @@ export default function UsersPage() {
     const pages = parsePages(u);
     setForm({
       name: u.name, email: u.email, password: "", role: u.role,
-      allowedPages: pages ?? ALL_PAGES.map(p => p.key),
+      allowedPages: pages ?? allPagesEdit(),
     });
     setShowDialog(true);
   };
 
   const togglePage = (key: string) => {
-    setForm(f => ({
-      ...f,
-      allowedPages: f.allowedPages.includes(key)
-        ? f.allowedPages.filter(k => k !== key)
-        : [...f.allowedPages, key],
-    }));
+    setForm(f => {
+      const next = { ...f.allowedPages };
+      if (key in next) delete next[key];
+      else next[key] = "edit";
+      return { ...f, allowedPages: next };
+    });
+  };
+
+  const setPageLevel = (key: string, level: "view" | "edit") => {
+    setForm(f => ({ ...f, allowedPages: { ...f.allowedPages, [key]: level } }));
   };
 
   const toggleAllPages = () => {
     setForm(f => ({
       ...f,
-      allowedPages: f.allowedPages.length === ALL_PAGES.length ? [] : ALL_PAGES.map(p => p.key),
+      allowedPages: Object.keys(f.allowedPages).length === ALL_PAGES.length ? {} : allPagesEdit(),
     }));
   };
 
@@ -262,7 +272,7 @@ export default function UsersPage() {
                             <Settings size={12} />
                             {pages === null
                               ? (ar ? "جميع الصفحات" : "All pages")
-                              : `${pages.length}/${ALL_PAGES.length} ${ar ? "صفحات" : "pages"}`}
+                              : `${Object.keys(pages).length}/${ALL_PAGES.length} ${ar ? "صفحات" : "pages"}`}
                             {isExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
                           </button>
                         </td>
@@ -297,18 +307,24 @@ export default function UsersPage() {
                               </p>
                             ) : (
                               <div className="flex flex-wrap gap-1.5">
-                                {ALL_PAGES.map(page => (
-                                  <span
-                                    key={page.key}
-                                    className={`text-xs px-2.5 py-1 rounded-full border font-medium ${
-                                      pages.includes(page.key)
-                                        ? "bg-primary/10 text-primary border-primary/20"
-                                        : "bg-muted text-muted-foreground/50 border-border line-through"
-                                    }`}
-                                  >
-                                    {ar ? page.labelAr : page.labelEn}
-                                  </span>
-                                ))}
+                                {ALL_PAGES.map(page => {
+                                  const level = pages[page.key];
+                                  return (
+                                    <span
+                                      key={page.key}
+                                      className={`text-xs px-2.5 py-1 rounded-full border font-medium flex items-center gap-1 ${
+                                        level === "edit"
+                                          ? "bg-primary/10 text-primary border-primary/20"
+                                          : level === "view"
+                                          ? "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/40"
+                                          : "bg-muted text-muted-foreground/50 border-border line-through"
+                                      }`}
+                                    >
+                                      {ar ? page.labelAr : page.labelEn}
+                                      {level === "view" && <Eye size={11} />}
+                                    </span>
+                                  );
+                                })}
                               </div>
                             )}
                           </td>
@@ -375,35 +391,62 @@ export default function UsersPage() {
                     onClick={toggleAllPages}
                     className="text-xs text-primary hover:underline"
                   >
-                    {form.allowedPages.length === ALL_PAGES.length
+                    {Object.keys(form.allowedPages).length === ALL_PAGES.length
                       ? (ar ? "إلغاء تحديد الكل" : "Deselect all")
                       : (ar ? "تحديد الكل" : "Select all")}
                   </button>
                 </div>
                 <div className="grid grid-cols-1 gap-1 p-3 bg-muted/40 rounded-lg border border-border/50">
                   {ALL_PAGES.map(page => {
-                    const checked = form.allowedPages.includes(page.key);
+                    const level = form.allowedPages[page.key];
+                    const checked = level !== undefined;
                     return (
-                      <button
+                      <div
                         key={page.key}
-                        type="button"
-                        onClick={() => togglePage(page.key)}
-                        className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-all text-start ${
+                        className={`flex items-center justify-between gap-2.5 px-3 py-2 rounded-md text-sm transition-all ${
                           checked ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
                         }`}
                       >
-                        {checked
-                          ? <CheckSquare size={15} className="text-primary flex-shrink-0" />
-                          : <Square size={15} className="flex-shrink-0" />}
-                        {ar ? page.labelAr : page.labelEn}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => togglePage(page.key)}
+                          className="flex items-center gap-2.5 flex-1 text-start"
+                        >
+                          {checked
+                            ? <CheckSquare size={15} className="text-primary flex-shrink-0" />
+                            : <Square size={15} className="flex-shrink-0" />}
+                          {ar ? page.labelAr : page.labelEn}
+                        </button>
+                        {checked && (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setPageLevel(page.key, "edit")}
+                              className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+                                level === "edit" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/70"
+                              }`}
+                            >
+                              {ar ? "تعديل" : "Edit"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPageLevel(page.key, "view")}
+                              className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+                                level === "view" ? "bg-amber-500 text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"
+                              }`}
+                            >
+                              {ar ? "عرض فقط" : "View only"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   {ar
-                    ? `تم تحديد ${form.allowedPages.length} من ${ALL_PAGES.length} صفحات`
-                    : `${form.allowedPages.length} of ${ALL_PAGES.length} pages selected`}
+                    ? `تم تحديد ${Object.keys(form.allowedPages).length} من ${ALL_PAGES.length} صفحات`
+                    : `${Object.keys(form.allowedPages).length} of ${ALL_PAGES.length} pages selected`}
                 </p>
               </div>
             )}

@@ -44,6 +44,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, totalItems, 
           variant="outline"
           size="icon"
           className="h-8 w-8"
+          data-allow-view
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
         >
@@ -53,6 +54,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, totalItems, 
           variant="outline"
           size="icon"
           className="h-8 w-8"
+          data-allow-view
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
         >
@@ -68,6 +70,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, totalItems, 
               variant={page === currentPage ? "default" : "outline"}
               size="icon"
               className="h-8 w-8 text-sm"
+              data-allow-view
               onClick={() => onPageChange(page as number)}
             >
               {page}
@@ -79,6 +82,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, totalItems, 
           variant="outline"
           size="icon"
           className="h-8 w-8"
+          data-allow-view
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
         >
@@ -88,6 +92,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, totalItems, 
           variant="outline"
           size="icon"
           className="h-8 w-8"
+          data-allow-view
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage === totalPages}
         >

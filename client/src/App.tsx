@@ -1,5 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Eye } from "lucide-react";
+import { parseUserPagePermissions, getPageAccess } from "@/lib/permissions";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -94,41 +96,54 @@ function ProtectedRoute({ children, pageKey, noPadding }: { children: React.Reac
   }
 
   // Check page-level permissions for non-admin users
+  let viewOnly = false;
   if (pageKey && user && user.role !== "admin") {
     const u = user as any;
-    if (u.allowedPages) {
-      try {
-        const allowed: string[] = JSON.parse(u.allowedPages);
-        if (!allowed.includes(pageKey)) {
-          // Redirect to dashboard (or first allowed page)
-          return (
-            <AppLayout>
-              <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-destructive"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-foreground">غير مصرح بالوصول</h2>
-                  <p className="text-muted-foreground text-sm mt-1">Access Denied</p>
-                  <p className="text-muted-foreground text-xs mt-2">ليس لديك صلاحية للوصول إلى هذه الصفحة</p>
-                </div>
-                <button
-                  onClick={() => navigate("/")}
-                  className="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-                >
-                  العودة للرئيسية / Go to Dashboard
-                </button>
-              </div>
-            </AppLayout>
-          );
-        }
-      } catch {
-        // If parse fails, allow access
-      }
+    const permissions = parseUserPagePermissions(u.allowedPages);
+    const access = getPageAccess(permissions, pageKey);
+    if (access === null) {
+      // Redirect to dashboard (or first allowed page)
+      return (
+        <AppLayout>
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-destructive"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-foreground">غير مصرح بالوصول</h2>
+              <p className="text-muted-foreground text-sm mt-1">Access Denied</p>
+              <p className="text-muted-foreground text-xs mt-2">ليس لديك صلاحية للوصول إلى هذه الصفحة</p>
+            </div>
+            <button
+              onClick={() => navigate("/")}
+              className="mt-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              العودة للرئيسية / Go to Dashboard
+            </button>
+          </div>
+        </AppLayout>
+      );
     }
+    viewOnly = access === "view";
   }
 
-  return <AppLayout noPadding={noPadding}>{children}</AppLayout>;
+  return (
+    <AppLayout noPadding={noPadding}>
+      {viewOnly ? (
+        <div className="relative">
+          <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-amber-700 dark:text-amber-300 text-xs font-medium">
+            <Eye size={14} />
+            وضع العرض فقط - لا يمكنك الإضافة أو التعديل أو الحذف في هذه الصفحة
+          </div>
+          <div className="[&_button:not([data-allow-view])]:opacity-50 [&_button:not([data-allow-view])]:pointer-events-none [&_button:not([data-allow-view])]:cursor-not-allowed">
+            {children}
+          </div>
+        </div>
+      ) : (
+        children
+      )}
+    </AppLayout>
+  );
 }
 
 function Router() {

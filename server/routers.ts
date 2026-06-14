@@ -1554,7 +1554,7 @@ export const appRouter = router({
         email: z.string().email(),
         password: z.string().min(6),
         role: z.enum(["admin", "warehouse_manager", "viewer"]),
-        allowedPages: z.array(z.string()).nullable().optional(),
+        allowedPages: z.union([z.array(z.string()), z.record(z.string(), z.enum(["view", "edit"]))]).nullable().optional(),
       }))
       .mutation(({ input }) => createUser(input)),
     update: adminProcedure
@@ -1565,7 +1565,7 @@ export const appRouter = router({
         password: z.string().min(6).optional(),
         role: z.enum(["admin", "warehouse_manager", "viewer"]).optional(),
         isActive: z.boolean().optional(),
-        allowedPages: z.array(z.string()).nullable().optional(),
+        allowedPages: z.union([z.array(z.string()), z.record(z.string(), z.enum(["view", "edit"]))]).nullable().optional(),
       }))
       .mutation(({ input }) => { const { id, ...data } = input; return updateUser(id, data); }),
     delete: adminProcedure

@@ -142,7 +142,7 @@ export async function createUser(data: {
   email: string;
   password: string;
   role: "admin" | "warehouse_manager" | "viewer";
-  allowedPages?: string[] | null;
+  allowedPages?: string[] | Record<string, string> | null;
 }) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
@@ -160,7 +160,7 @@ export async function createUser(data: {
 
 export async function updateUser(
   id: number,
-  data: { name?: string; email?: string; role?: "admin" | "warehouse_manager" | "viewer"; isActive?: boolean; password?: string; allowedPages?: string[] | null }
+  data: { name?: string; email?: string; role?: "admin" | "warehouse_manager" | "viewer"; isActive?: boolean; password?: string; allowedPages?: string[] | Record<string, string> | null }
 ) {
   const db = await getDb();
   if (!db) throw new Error("DB not available");

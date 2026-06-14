@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { parseUserPagePermissions, getPageAccess, type PagePermissions } from "@/lib/permissions";
 import {
   AlertTriangle,
   CalendarDays,
@@ -181,19 +182,13 @@ export default function AppLayout({ children, noPadding }: { children: ReactNode
   ];
 
   // ── Permission helpers ─────────────────────────────────────────────────────
-  const getUserAllowedPages = (): string[] | null => {
-    if (!user) return null;
-    if (user.role === "admin") return null;
-    const u = user as any;
-    if (!u.allowedPages) return null;
-    try { return JSON.parse(u.allowedPages); } catch { return null; }
-  };
-  const allowedPages = getUserAllowedPages();
+  const pagePermissions: PagePermissions | null =
+    !user || user.role === "admin" ? null : parseUserPagePermissions((user as any).allowedPages);
 
   const filterItems = (items: NavItem[]) =>
     items.filter((item) => {
       if (item.roles && !item.roles.includes(user?.role || "viewer")) return false;
-      if (allowedPages !== null && !allowedPages.includes(item.key)) return false;
+      if (getPageAccess(pagePermissions, item.key) === null) return false;
       return true;
     });
 
