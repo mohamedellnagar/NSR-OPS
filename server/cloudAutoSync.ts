@@ -17,15 +17,15 @@ const STATE_FILE = path.join(process.cwd(), ".cloud-auto-sync-state.json");
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let isRunning = false;
-let userEnabled = true;
+let userEnabled = false;
 
 function loadPersistedEnabled(): boolean {
   try {
     const raw = fs.readFileSync(STATE_FILE, "utf-8");
     const parsed = JSON.parse(raw);
-    return parsed.enabled !== false;
+    return parsed.enabled === true;
   } catch {
-    return true; // default: on
+    return false; // default: off (manual sync only)
   }
 }
 
