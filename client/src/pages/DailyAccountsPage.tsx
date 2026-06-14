@@ -461,11 +461,22 @@ export default function DailyAccountsPage() {
 
               {/* تكلفة البضاعة المستخدمة */}
               <div className="rounded-xl border border-orange-200 dark:border-orange-800/50 bg-orange-50 dark:bg-orange-950/30 p-3">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <div className="h-6 w-6 rounded-md bg-orange-200 dark:bg-orange-800/50 flex items-center justify-center">
-                    <ShoppingCart className="w-3 h-3 text-orange-600 dark:text-orange-300" />
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-6 w-6 rounded-md bg-orange-200 dark:bg-orange-800/50 flex items-center justify-center">
+                      <ShoppingCart className="w-3 h-3 text-orange-600 dark:text-orange-300" />
+                    </div>
+                    <span className="text-xs font-semibold text-orange-700 dark:text-orange-300">تكلفة البضاعة</span>
                   </div>
-                  <span className="text-xs font-semibold text-orange-700 dark:text-orange-300">تكلفة البضاعة</span>
+                  {(() => {
+                    const sales = kpi?.netSales ?? kpi?.totalSales ?? monthTotalSales;
+                    const cogsPercent = sales > 0 ? ((kpi?.cogsValue ?? 0) / sales) * 100 : 0;
+                    return (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
+                        {cogsPercent.toFixed(1)}%
+                      </span>
+                    );
+                  })()}
                 </div>
                 <p className="text-lg font-bold text-orange-700 dark:text-orange-200">{fmt(kpi?.cogsValue ?? 0)} <span className="text-xs font-normal">د.إ</span></p>
                 <div className="text-[10px] text-orange-500/70 dark:text-orange-400/60 mt-0.5 space-y-0.5">
