@@ -61,6 +61,7 @@ import {
   Download,
   FileSpreadsheet,
   Tag,
+  Tags,
   MessageSquare,
   ArrowLeftRight,
   Eye,
@@ -1405,6 +1406,14 @@ export default function RecipesPage() {
     return Array.from(cats).sort();
   }, [productsList]);
 
+  const aiCategorizeProducts = trpc.products.aiAutoCategorize.useMutation({
+    onSuccess: (r: any) => {
+      utils.products.list.invalidate();
+      toast.success(`تم تصنيف ${r.categorized} صنف من ${r.totalProducts}`);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const createProduct = trpc.products.create.useMutation({
     onSuccess: () => {
       utils.products.list.invalidate();
@@ -1486,6 +1495,21 @@ export default function RecipesPage() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap justify-end items-center">
+          {/* زر تصنيف الأصناف تلقائياً بالذكاء */}
+          <Button
+            variant="outline"
+            className="gap-2 text-purple-700 border-purple-300 hover:bg-purple-50"
+            disabled={aiCategorizeProducts.isPending}
+            title="تصنيف الأصناف غير المصنّفة تلقائياً حسب الاسم والوصف (مثال: سندوتش كبدة → السندوتشات)"
+            onClick={() => {
+              if (!confirm("سيتم تصنيف الأصناف غير المصنّفة تلقائياً بالذكاء الاصطناعي حسب اسمها ووصفها. هل تريد المتابعة؟")) return;
+              aiCategorizeProducts.mutate({ onlyUncategorized: true });
+            }}
+          >
+            {aiCategorizeProducts.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Tags className="w-4 h-4" />}
+            تصنيف الأصناف بالذكاء
+          </Button>
+
           {/* زر AI للكل */}
           <Button
             variant="outline"

@@ -2040,6 +2040,14 @@ export const appRouter = router({
         return { updated: (result as any)[0]?.affectedRows ?? 0 };
       }),
 
+    // تصنيف الأصناف تلقائياً بالذكاء الاصطناعي حسب الاسم والوصف
+    aiAutoCategorize: warehouseProcedure
+      .input(z.object({ onlyUncategorized: z.boolean().default(true) }).optional())
+      .mutation(async ({ input }) => {
+        const { autoCategorizeProducts } = await import("./aiCategorizeRecipes");
+        return autoCategorizeProducts({ onlyUncategorized: input?.onlyUncategorized });
+      }),
+
     // حذف فئة (إزالتها من كل المنتجات)
     deleteCategory: warehouseProcedure
       .input(z.object({ name: z.string() }))
