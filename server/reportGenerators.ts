@@ -4,9 +4,9 @@
  */
 
 import mysql from "mysql2/promise";
-import { getBusinessDayTzOffset, calcKitchenPullRawCost } from "./db";
+import { getBusinessDayTzOffset, calcKitchenPullRawCost, getFinancialKpi } from "./db";
 
-type ReportType = "daily_sales" | "orders_summary" | "kitchen_cost" | "inventory_value" | "waste_summary" | "system_alerts" | "warehouse_performance" | "daily_account_summary";
+type ReportType = "daily_sales" | "orders_summary" | "kitchen_cost" | "inventory_value" | "waste_summary" | "system_alerts" | "warehouse_performance" | "daily_account_summary" | "daily_financial_summary";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -436,6 +436,57 @@ async function resolveVariables(
         vars['carry_to_next'] = `${fmt(carryForwardToNext)} د.إ`;
         vars['net_profit'] = `${fmt(netProfit)} د.إ`;
         vars['notes'] = row.notes ?? '—';
+      } catch (_) { /* ignore */ }
+    }
+    // ─── Daily Financial Summary (matches "الحسابات اليومية" KPI cards) ────────
+    if (reportType === "daily_financial_summary") {
+      try {
+        const d = new Date(date + "T00:00:00");
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1;
+        const kpi = await getFinancialKpi(year, month);
+
+        const cogsPct = kpi.netSales > 0 ? (kpi.cogsValue / kpi.netSales) * 100 : 0;
+
+        // نسبة المطعم: من إجمالي إيداعات النقدي والتوريدات مقابل نصف المبيعات
+        const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+        const monthEnd = `${year}-${String(month).padStart(2, '0')}-31`;
+        const [daRows] = await conn.query<any[]>(
+          `SELECT
+            COUNT(*) as days,
+            COALESCE(SUM(salesCash),0) as cash,
+            COALESCE(SUM(supplyToRestaurant+supplyToManagement+supplyExtra),0) as supply
+           FROM daily_accounts WHERE accountDate BETWEEN ? AND ?`, [monthStart, monthEnd]);
+        const da = (daRows as any[])[0] ?? { days: 0, cash: 0, supply: 0 };
+        const monthTotalCash = Number(da.cash || 0);
+        const monthTotalSupply = Number(da.supply || 0);
+        const restaurantReceived = monthTotalCash + monthTotalSupply;
+        const restaurantPercent = kpi.netSales > 0 ? (restaurantReceived / kpi.netSales) * 100 : 0;
+        const restaurantExpected = kpi.netSales / 2 - monthTotalCash;
+        const restaurantDiff = monthTotalSupply - restaurantExpected;
+
+        vars['account_month'] = new Date(year, month - 1, 1).toLocaleDateString('ar-AE', { month: 'long', year: 'numeric' });
+        vars['days_recorded'] = String(da.days || 0);
+        vars['net_sales'] = `${fmt(kpi.netSales)} د.إ`;
+        vars['gross_profit'] = `${fmt(kpi.grossProfit)} د.إ`;
+        vars['gross_margin'] = `${fmt(kpi.grossMargin, 1)}%`;
+        vars['cogs_value'] = `${fmt(kpi.cogsValue)} د.إ`;
+        vars['cogs_pct'] = `${fmt(cogsPct, 1)}%`;
+        vars['op_paid'] = `${fmt(kpi.opPaid)} د.إ`;
+        vars['op_deferred'] = `${fmt(kpi.opDeferred)} د.إ`;
+        vars['opening_stock_value'] = `${fmt(kpi.openingStockValue)} د.إ`;
+        vars['opening_stock_date'] = kpi.openingStockDate ? arabicDate(kpi.openingStockDate) : '—';
+        vars['current_inventory_value'] = `${fmt(kpi.currentInventoryValue)} د.إ`;
+        vars['raw_materials_value'] = `${fmt(kpi.rawMaterialsValue)} د.إ`;
+        vars['manufactured_value'] = `${fmt(kpi.manufacturedValue)} د.إ`;
+        vars['butcher_value'] = `${fmt(kpi.butcherValue)} د.إ`;
+        vars['total_debt'] = `${fmt(kpi.totalDebt)} د.إ`;
+        vars['supplier_debt'] = `${fmt(kpi.supplierDebt)} د.إ`;
+        vars['free_debt'] = `${fmt(kpi.freeDebt)} د.إ`;
+        vars['restaurant_percentage'] = `${fmt(restaurantPercent, 1)}%`;
+        vars['restaurant_received'] = `${fmt(restaurantReceived)} د.إ`;
+        vars['restaurant_expected'] = `${fmt(restaurantExpected)} د.إ`;
+        vars['restaurant_diff'] = `${fmt(restaurantDiff)} د.إ`;
       } catch (_) { /* ignore */ }
     }
     // ─── Monthly Performance (shared across all report types) ────────────────

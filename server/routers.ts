@@ -3598,12 +3598,12 @@ export const appRouter = router({
           }
           // If template has full_text, use new model
           if (tmplRow?.full_text) {
-            const validTypes = ['daily_sales','orders_summary','kitchen_cost','inventory_value','waste_summary','system_alerts','warehouse_performance','daily_account_summary'];
+            const validTypes = ['daily_sales','orders_summary','kitchen_cost','inventory_value','waste_summary','system_alerts','warehouse_performance','daily_account_summary','daily_financial_summary'];
             const rt = validTypes.includes(tmplRow.reportType) ? tmplRow.reportType : 'daily_sales';
             return previewFullTextTemplate(tmplRow.full_text, rt as any);
           }
           // Fallback to old model
-          const validTypes2 = ['daily_sales','orders_summary','kitchen_cost','inventory_value','waste_summary','system_alerts','warehouse_performance','daily_account_summary'];
+          const validTypes2 = ['daily_sales','orders_summary','kitchen_cost','inventory_value','waste_summary','system_alerts','warehouse_performance','daily_account_summary','daily_financial_summary'];
           const rt2 = validTypes2.includes(input.reportType) ? input.reportType : 'daily_sales';
           return generateReport(rt2 as any, tmplRow);
         } finally { await conn.end(); }
@@ -3617,7 +3617,7 @@ export const appRouter = router({
         date: z.string().optional(), // YYYY-MM-DD, defaults to today
       }))
       .mutation(async ({ input }) => {
-        const validTypes = ['daily_sales','orders_summary','kitchen_cost','inventory_value','waste_summary','system_alerts','warehouse_performance','daily_account_summary'];
+        const validTypes = ['daily_sales','orders_summary','kitchen_cost','inventory_value','waste_summary','system_alerts','warehouse_performance','daily_account_summary','daily_financial_summary'];
         const rt = validTypes.includes(input.reportType) ? input.reportType : 'daily_sales';
         // If date provided, use it; otherwise use today
         const preview = input.date
