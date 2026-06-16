@@ -124,7 +124,7 @@ function InvoiceAccordionRow({
 }) {
   const [open, setOpen] = useState(false);
   const hasItems = (inv.items?.length ?? 0) > 0;
-  const displayAmount = showPaidAmount ? (inv.paidAmount ?? 0) : inv.totalAmount;
+  const displayAmount = inv.paidAmount != null ? inv.paidAmount : (showPaidAmount ? 0 : inv.totalAmount);
   return (
     <div>
       <button

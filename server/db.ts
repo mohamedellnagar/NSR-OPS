@@ -5601,9 +5601,28 @@ export async function getFreeInvoiceExpensesForDate(accountDate: string) {
     totalAmount: parseFloat(r.totalAmount as unknown as string),
     expenseCategory: r.expenseCategory ?? "other",
   }));
-  // ── Supplier invoices (paid) ──
-  // استخدام paidAt (وقت الدفع الفعلي) مع منطق اليوم التشغيلي (6 صباحاً)
-  const supplierRows = await db
+  // ── Supplier invoices: use invoice_payment_history as primary source ──
+  // This correctly handles multi-payment invoices: shows only the amount paid on THIS day,
+  // not the total invoice amount (which would be wrong for e.g. 50 on day1 + 110 on day2).
+  const historySupplierRaw = await (db as any)
+    .select({
+      id: invoices.id,
+      supplierName: invoices.supplierName,
+      invoiceNumber: invoices.invoiceNumber,
+      totalAmount: invoices.totalAmount,
+      paymentStatus: invoices.paymentStatus,
+      todayPaid: sql<number>`SUM(CAST(iph.paidAmount AS DECIMAL(15,3)))`,
+    })
+    .from(sql`invoice_payment_history iph`)
+    .innerJoin(invoices, sql`${invoices.id} = iph.invoiceId AND iph.invoiceType = 'supplier'`)
+    .where(sql`DATE_FORMAT(CONVERT_TZ(iph.paymentDate, '+00:00', '+04:00') - INTERVAL 6 HOUR, '%Y-%m-%d') = ${accountDate}`)
+    .groupBy(invoices.id)
+    .orderBy(invoices.id);
+
+  const historySupplierIds = new Set(historySupplierRaw.map((r: any) => r.id as number));
+
+  // Fallback: legacy fully-paid invoices without any payment history records
+  const legacySupplierRows = await db
     .select({
       id: invoices.id,
       supplierName: invoices.supplierName,
@@ -5620,49 +5639,33 @@ export async function getFreeInvoiceExpensesForDate(accountDate: string) {
       )
     )
     .orderBy(invoices.id);
-  const supplierInvoicesList: InvoiceRow[] = supplierRows.map((r) => ({
-    id: r.id,
-    supplierName: r.supplierName ?? "—",
-    invoiceNumber: r.invoiceNumber,
-    totalAmount: parseFloat(r.totalAmount as unknown as string),
-    expenseCategory: "supplier",
-    paidAt: r.paidAt ?? r.updatedAt,
-  }));
-  const supplierInvoicesTotal = supplierInvoicesList.reduce((s, r) => s + r.totalAmount, 0);
 
-  // ── Partial supplier invoices (paid partially today) ──
-  // جلب الفواتير الجزئية التي تم دفع دفعة لها في هذا اليوم تحديداً
-  const partialSupplierRaw = await (db as any)
-    .select({
-      id: invoices.id,
-      supplierName: invoices.supplierName,
-      invoiceNumber: invoices.invoiceNumber,
-      totalAmount: invoices.totalAmount,
-      expenseCategory: sql<string>`'supplier'`,
-      paidAt: invoices.paidAt,
-      updatedAt: invoices.updatedAt,
-      todayPaid: sql<number>`SUM(CASE WHEN DATE_FORMAT(CONVERT_TZ(iph.paymentDate, '+00:00', '+04:00') - INTERVAL 6 HOUR, '%Y-%m-%d') = ${accountDate} THEN CAST(iph.paidAmount AS DECIMAL(15,3)) ELSE 0 END)`,
-    })
-    .from(invoices)
-    .innerJoin(
-      sql`invoice_payment_history iph`,
-      sql`iph.invoiceId = ${invoices.id} AND iph.invoiceType = 'supplier'`
-    )
-    .where(eq(invoices.paymentStatus, "partial"))
-    .groupBy(invoices.id)
-    .having(sql`SUM(CASE WHEN DATE_FORMAT(CONVERT_TZ(iph.paymentDate, '+00:00', '+04:00') - INTERVAL 6 HOUR, '%Y-%m-%d') = ${accountDate} THEN 1 ELSE 0 END) > 0`)
-    .orderBy(invoices.id);
-  const partialSupplierList: InvoiceRow[] = partialSupplierRaw.map((r: any) => ({
-    id: r.id,
-    supplierName: r.supplierName ?? "—",
-    invoiceNumber: r.invoiceNumber,
-    totalAmount: parseFloat(r.totalAmount as unknown as string),
-    paidAmount: parseFloat(String(r.todayPaid ?? "0")),
-    expenseCategory: "supplier",
-    paidAt: r.paidAt ?? r.updatedAt,
-    isPartial: true,
-  }));
-  const partialSupplierTotal = partialSupplierList.reduce((s, r) => s + (r.paidAmount ?? 0), 0);
+  const supplierInvoicesList: InvoiceRow[] = [
+    ...historySupplierRaw.map((r: any) => ({
+      id: r.id as number,
+      supplierName: (r.supplierName ?? "—") as string,
+      invoiceNumber: r.invoiceNumber as string | null,
+      totalAmount: parseFloat(r.totalAmount as unknown as string),
+      paidAmount: parseFloat(String(r.todayPaid ?? "0")),
+      expenseCategory: "supplier",
+      isPartial: r.paymentStatus !== "paid" || parseFloat(String(r.todayPaid ?? "0")) < parseFloat(r.totalAmount as unknown as string),
+    })),
+    ...legacySupplierRows
+      .filter(r => !historySupplierIds.has(r.id))
+      .map(r => ({
+        id: r.id,
+        supplierName: r.supplierName ?? "—",
+        invoiceNumber: r.invoiceNumber,
+        totalAmount: parseFloat(r.totalAmount as unknown as string),
+        expenseCategory: "supplier",
+        paidAt: r.paidAt ?? r.updatedAt,
+      })),
+  ];
+  const supplierInvoicesTotal = supplierInvoicesList.reduce((s, r) => s + (r.paidAmount ?? r.totalAmount), 0);
+
+  // Empty partial list (now merged into supplierInvoicesList above)
+  const partialSupplierList: InvoiceRow[] = [];
+  const partialSupplierTotal = 0;
 
   // ── Partial free invoices (paid partially today) ──
   // جلب الفواتير الحرة الجزئية التي تم دفع دفعة لها في هذا اليوم تحديداً

@@ -134,7 +134,7 @@ function InvoiceCategoryRow({
   invoice,
   accountDate,
 }: {
-  invoice: { id: number; supplierName: string; invoiceNumber: string | null; totalAmount: number; expenseCategory: string };
+  invoice: { id: number; supplierName: string; invoiceNumber: string | null; totalAmount: number; paidAmount?: number; expenseCategory: string };
   accountDate: string;
 }) {
   const utils = trpc.useUtils();
@@ -146,6 +146,7 @@ function InvoiceCategoryRow({
     onError: (e) => toast.error(e.message),
   });
   const cat = EXPENSE_CATEGORIES.find((c) => c.value === invoice.expenseCategory);
+  const displayAmount = invoice.paidAmount ?? invoice.totalAmount;
   return (
     <tr className="border-b last:border-0 hover:bg-muted/20 transition-colors">
       <td className="px-2 py-2 text-xs font-medium max-w-[90px] truncate" title={invoice.supplierName}>
@@ -155,7 +156,7 @@ function InvoiceCategoryRow({
         {invoice.invoiceNumber ?? "—"}
       </td>
       <td className="px-2 py-2 text-xs font-semibold text-orange-600 whitespace-nowrap">
-        {invoice.totalAmount.toLocaleString("ar-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.إ
+        {displayAmount.toLocaleString("ar-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} د.إ
       </td>
       <td className="px-2 py-2">
         <Select
