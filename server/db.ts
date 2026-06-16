@@ -5832,31 +5832,53 @@ export async function getMonthExpenses(
       else if (r.expenseCategory === "maintenance") result[key].maintenance += amt;
     }
 
-    // ── Supplier invoices (paid) grouped by payment date in business-day timezone ──
-    // Using paidAt (or updatedAt as fallback), using the same business-day tzOffset directly
-    const [supplierRows] = await conn.execute(
+    // ── Supplier invoices grouped by PAYMENT date using invoice_payment_history ──
+    // Primary source: iph rows (correct per-day amounts for multi-payment invoices)
+    // Fallback: fully-paid invoices with no history records (legacy single-payment)
+    const [historySupplierRows] = await conn.execute(
       `SELECT
-        DATE_FORMAT(
-          CONVERT_TZ(COALESCE(paidAt, updatedAt), '+00:00', '${tzOffset}'),
-          '%Y-%m-%d'
-        ) AS dateKey,
-        SUM(totalAmount) AS totalAmount
-       FROM invoices
-       WHERE paymentStatus = 'paid'
-         AND DATE_FORMAT(
-           CONVERT_TZ(COALESCE(paidAt, updatedAt), '+00:00', '${tzOffset}'),
-           '%Y-%m-%d'
-         ) >= ?
-         AND DATE_FORMAT(
-           CONVERT_TZ(COALESCE(paidAt, updatedAt), '+00:00', '${tzOffset}'),
-           '%Y-%m-%d'
-         ) <= ?
+        DATE_FORMAT(CONVERT_TZ(iph.paymentDate, '+00:00', '${tzOffset}'), '%Y-%m-%d') AS dateKey,
+        SUM(CAST(iph.paidAmount AS DECIMAL(15,3))) AS totalAmount
+       FROM invoice_payment_history iph
+       WHERE iph.invoiceType = 'supplier'
+         AND DATE_FORMAT(CONVERT_TZ(iph.paymentDate, '+00:00', '${tzOffset}'), '%Y-%m-%d') >= ?
+         AND DATE_FORMAT(CONVERT_TZ(iph.paymentDate, '+00:00', '${tzOffset}'), '%Y-%m-%d') <= ?
        GROUP BY dateKey
        ORDER BY dateKey`,
       [startDate, endDate]
     ) as any;
 
-    for (const r of supplierRows as any[]) {
+    // Collect invoice IDs that have history records in this month range
+    const [historyInvoiceIds] = await conn.execute(
+      `SELECT DISTINCT iph.invoiceId FROM invoice_payment_history iph
+       WHERE iph.invoiceType = 'supplier'
+         AND DATE_FORMAT(CONVERT_TZ(iph.paymentDate, '+00:00', '${tzOffset}'), '%Y-%m-%d') >= ?
+         AND DATE_FORMAT(CONVERT_TZ(iph.paymentDate, '+00:00', '${tzOffset}'), '%Y-%m-%d') <= ?`,
+      [startDate, endDate]
+    ) as any;
+    const historyIds = new Set((historyInvoiceIds as any[]).map((r: any) => r.invoiceId));
+
+    for (const r of historySupplierRows as any[]) {
+      const key = r.dateKey as string;
+      if (!result[key]) result[key] = { operational: 0, maintenance: 0, freeTotal: 0, supplierTotal: 0, totalExpenses: 0 };
+      result[key].supplierTotal += parseFloat(r.totalAmount) || 0;
+    }
+
+    // Legacy fallback: paid invoices with no history records
+    const [legacySupplierRows] = await conn.execute(
+      `SELECT
+        DATE_FORMAT(CONVERT_TZ(COALESCE(paidAt, updatedAt), '+00:00', '${tzOffset}'), '%Y-%m-%d') AS dateKey,
+        id, totalAmount
+       FROM invoices
+       WHERE paymentStatus = 'paid'
+         AND DATE_FORMAT(CONVERT_TZ(COALESCE(paidAt, updatedAt), '+00:00', '${tzOffset}'), '%Y-%m-%d') >= ?
+         AND DATE_FORMAT(CONVERT_TZ(COALESCE(paidAt, updatedAt), '+00:00', '${tzOffset}'), '%Y-%m-%d') <= ?
+       ORDER BY dateKey`,
+      [startDate, endDate]
+    ) as any;
+
+    for (const r of legacySupplierRows as any[]) {
+      if (historyIds.has(r.id)) continue; // already counted via history
       const key = r.dateKey as string;
       if (!result[key]) result[key] = { operational: 0, maintenance: 0, freeTotal: 0, supplierTotal: 0, totalExpenses: 0 };
       result[key].supplierTotal += parseFloat(r.totalAmount) || 0;
