@@ -913,8 +913,14 @@ export const dailyAccounts = mysqlTable(
     // ── المبلغ المرحّل (مخزّن من الملف أو محسوب) ────────────────────────────
     carryForwardToNext: decimal("carryForwardToNext", { precision: 12, scale: 3 }),
 
+    // ── وجبات الموظفين ────────────────────────────────────────────────────────
+    staffMeals: decimal("staffMeals", { precision: 12, scale: 3 }),
+
     // ── ملاحظات ───────────────────────────────────────────────────────────────
     notes: text("notes"),
+
+    // ── قيمة المخزون المحفوظة وقت التسجيل (لحساب COGS التاريخي) ──────────────
+    stockValue: decimal("stockValue", { precision: 14, scale: 3 }),
 
     createdBy: int("createdBy").references(() => users.id),
     createdAt: timestamp("createdAt").defaultNow().notNull(),

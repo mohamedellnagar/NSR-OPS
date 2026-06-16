@@ -159,6 +159,8 @@ import {
   getTodayDashboard,
   getMonthlyDailyPerformance,
   getWeeklyTrend,
+  getMonthlySalesChart,
+  getDailySalesForMonth,
   saveDailyAccount,
   getDailyAccounts,
   getDailyAccountByDate,
@@ -1157,6 +1159,10 @@ export const appRouter = router({
     today: protectedProcedure.query(() => getTodayDashboard()),
     monthlyDailyPerformance: protectedProcedure.query(() => getMonthlyDailyPerformance()),
     weeklyTrend: protectedProcedure.query(() => getWeeklyTrend()),
+    monthlySalesChart: protectedProcedure.query(() => getMonthlySalesChart()),
+    dailySalesForMonth: protectedProcedure
+      .input(z.object({ monthKey: z.string() }))
+      .query(({ input }) => getDailySalesForMonth(input.monthKey)),
   }),
 
   // ─── Categories ─────────────────────────────────────────────────────────────
@@ -4271,7 +4277,9 @@ ${statsContext}
         supplyToRestaurant: z.number().min(0).default(0),
         supplyToManagement: z.number().min(0).default(0),
         supplyExtra: z.number().min(0).default(0),
+        staffMeals: z.number().min(0).optional(),
         notes: z.string().optional(),
+        stockValue: z.number().min(0).optional(),
         // بيانات إضافية لرسالة واتساب (محسوبة في الواجهة)
         expensesSupplierInvoices: z.number().min(0).default(0),
         expensesFreeInvoices: z.number().min(0).default(0),

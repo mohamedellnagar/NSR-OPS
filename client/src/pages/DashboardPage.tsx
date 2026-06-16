@@ -11,7 +11,7 @@ import { Link } from "wouter";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, PieChart, Pie, ComposedChart,
-  Line, Area,
+  Line, Area, AreaChart,
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import AIWhatsAppTemplateButton from "@/components/AIWhatsAppTemplateButton";
@@ -102,6 +102,16 @@ export default function DashboardPage() {
   const { data: dailyPerf } = trpc.dashboard.monthlyDailyPerformance.useQuery(undefined, {
     refetchInterval: 10 * 60 * 1000,
   });
+  const { data: monthlySales } = trpc.dashboard.monthlySalesChart.useQuery(undefined, {
+    refetchInterval: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+  const [salesView, setSalesView] = useState<"year" | "month">("year");
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+  const { data: dailySalesData } = trpc.dashboard.dailySalesForMonth.useQuery(
+    { monthKey: selectedMonth },
+    { enabled: salesView === "month", refetchOnWindowFocus: false }
+  );
 
   // جلب كل الفواتير لحساب إحصائيات المديونية بنفس منطق صفحة الفواتير
   const { data: allInvoicesRaw } = trpc.invoices.allUnified.useQuery(undefined, {
@@ -530,277 +540,110 @@ export default function DashboardPage() {
 
       </div>
 
-      {/* ── Row 2: Stock Alerts + Kitchen Status ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Stock Status */}
-        <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-          <SectionHeader title="حالة المخزون" sub="توزيع المواد حسب مستوى المخزون" icon={<Layers size={16} />} />
-          <div className="flex items-center gap-4">
-            {stockPie.length > 0 ? (
-              <>
-                <ResponsiveContainer width={130} height={130}>
-                  <PieChart>
-                    <Pie data={stockPie} cx="50%" cy="50%" innerRadius={38} outerRadius={58} dataKey="value" strokeWidth={0}>
-                      {stockPie.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="flex-1 space-y-2.5">
-                  {stockPie.map((d, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm">
-                      <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: d.color }} />
-                      <span className="text-muted-foreground flex-1">{d.name}</span>
-                      <span className="font-bold text-foreground">{d.value}</span>
-                    </div>
-                  ))}
-                  <div className="pt-1 border-t border-border text-xs text-muted-foreground">
-                    إجمالي: {s.stock.totalMaterials} مادة
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex items-center justify-center w-full h-32 text-muted-foreground text-sm">لا توجد بيانات</div>
-            )}
-          </div>
-        </div>
-
-        {/* Kitchen Today Status */}
-        <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-          <SectionHeader title="حالة المطبخ اليوم" sub="متابعة سجلات السحب والجرد" icon={<ChefHat size={16} />} />
-          {s.todayKitchen.totalPulls === 0 ? (
-            <div className="flex flex-col items-center justify-center h-28 text-muted-foreground gap-2">
-              <ChefHat size={28} className="opacity-30" />
-              <p className="text-sm">لا توجد سجلات سحب اليوم</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {/* Progress bar */}
-              <div>
-                <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                  <span>نسبة الإنجاز</span>
-                  <span className="font-bold text-foreground">{kitchenDoneRatio}%</span>
-                </div>
-                <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${kitchenDoneRatio}%`,
-                      background: kitchenDoneRatio >= 80 ? "oklch(0.55 0.18 150)" : kitchenDoneRatio >= 50 ? "oklch(0.70 0.18 60)" : "oklch(0.55 0.22 25)",
-                    }}
-                  />
-                </div>
-              </div>
-              {/* Status grid */}
-              <div className="grid grid-cols-3 gap-2">
-                <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{s.todayKitchen.openPulls}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">مفتوح</p>
-                </div>
-                <div className="bg-amber-50 dark:bg-amber-950/30 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{s.todayKitchen.countedPulls}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">تم الجرد</p>
-                </div>
-                <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-xl p-3 text-center">
-                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{s.todayKitchen.closedPulls}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">مغلق</p>
-                </div>
-              </div>
-              {s.todayKitchen.totalWasteQty > 0 && (
-                <div className="flex items-center gap-2 text-xs text-red-500 bg-red-50 dark:bg-red-950/20 rounded-lg px-3 py-2">
-                  <Flame size={12} />
-                  هدر اليوم: {fmtNum(s.todayKitchen.totalWasteQty, 2)} وحدة
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* ── Row 3: Charts ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Kitchen 7-day trend */}
+      <div className="grid grid-cols-1 gap-6">
+        {/* Sales Chart with view filter */}
         <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-          <SectionHeader title="نشاط المطبخ (7 أيام)" sub="عدد سجلات السحب والهدر يومياً" icon={<BarChart3 size={16} />} />
-          {kitchenChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={kitchenChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0 0 / 0.3)" />
-                <XAxis dataKey="day" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 10, fontSize: 12, border: "1px solid oklch(0.85 0 0)" }}
-                  labelStyle={{ fontWeight: "bold" }}
-                />
-                <Bar dataKey="سحب" fill="oklch(0.55 0.18 250)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="هدر" fill="oklch(0.55 0.22 25)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">لا توجد بيانات</div>
-          )}
-        </div>
-
-        {/* Top pulled materials today */}
-        <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-          <SectionHeader title="أكثر المواد سحباً اليوم" sub="الكميات المسحوبة من المطبخ" icon={<TrendingUp size={16} />} />
-          {topPullsData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={topPullsData} layout="vertical" margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0 0 / 0.3)" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={80} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 10, fontSize: 12, border: "1px solid oklch(0.85 0 0)" }}
-                />
-                <Bar dataKey="كمية" radius={[0, 4, 4, 0]}>
-                  {topPullsData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-40 text-muted-foreground gap-2">
-              <Package size={28} className="opacity-30" />
-              <p className="text-sm">لا توجد سحبيات اليوم</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Row 4: Critical Stock + Recent Transactions ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Critical Stock */}
-        <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+          {/* Header row */}
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <AlertTriangle size={16} className="text-amber-500" />
+              <BarChart3 size={16} className="text-muted-foreground" />
               <div>
-                <h2 className="text-base font-bold text-foreground">تنبيهات المخزون</h2>
-                <p className="text-xs text-muted-foreground">مواد تحتاج إعادة طلب</p>
-              </div>
-            </div>
-            <Link href="/alerts">
-              <span className="text-xs text-primary hover:underline cursor-pointer">عرض الكل</span>
-            </Link>
-          </div>
-          {s.criticalItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-28 text-muted-foreground gap-2">
-              <CheckCircle2 size={28} className="text-emerald-500 opacity-60" />
-              <p className="text-sm">جميع المواد بمستوى جيد</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {s.criticalItems.map((item, i) => (
-                <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-muted/40 hover:bg-muted/60 transition-colors">
-                  <div className={`w-2 h-8 rounded-full flex-shrink-0 ${item.status === "out" ? "bg-red-500" : "bg-amber-500"}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      متاح: <span className={`font-semibold ${item.status === "out" ? "text-red-500" : "text-amber-500"}`}>{fmtNum(item.currentQuantity, 2)}</span>
-                      {" / "}الحد الأدنى: {fmtNum(item.minimumQuantity, 2)} {item.unit}
-                    </p>
-                  </div>
-                  <Badge variant="outline" className={item.status === "out" ? "text-red-500 border-red-500/40 bg-red-500/10 text-xs" : "text-amber-500 border-amber-500/40 bg-amber-500/10 text-xs"}>
-                    {item.status === "out" ? "نفد" : "منخفض"}
-                  </Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Recent Transactions Today */}
-        <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Clock size={16} className="text-primary" />
-              <div>
-                <h2 className="text-base font-bold text-foreground">آخر معاملات اليوم</h2>
+                <p className="text-sm font-semibold">
+                  {salesView === "year" ? "المبيعات الشهرية (12 شهر)" : `مبيعات ${(monthlySales ?? []).find(m => m.monthKey === selectedMonth)?.month ?? selectedMonth}`}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  دخول: {s.todayTx.inCount} | خروج: {s.todayTx.outCount}
+                  {salesView === "year" ? "حركة المبيعات على مدار السنة" : "المبيعات اليومية للشهر المحدد"}
                 </p>
               </div>
             </div>
-            <Link href="/transactions">
-              <span className="text-xs text-primary hover:underline cursor-pointer">عرض الكل</span>
-            </Link>
+            {/* Controls */}
+            <div className="flex items-center gap-2">
+              {salesView === "month" && (
+                <select
+                  value={selectedMonth}
+                  onChange={e => setSelectedMonth(e.target.value)}
+                  className="text-xs border border-border rounded-lg px-2 py-1 bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  {(monthlySales ?? []).filter(m => m.sales > 0).map(m => (
+                    <option key={m.monthKey} value={m.monthKey}>{m.month} {m.monthKey.slice(0, 4)}</option>
+                  ))}
+                </select>
+              )}
+              <div className="flex rounded-lg border border-border overflow-hidden text-xs">
+                <button
+                  onClick={() => setSalesView("year")}
+                  className={`px-3 py-1 transition-colors ${salesView === "year" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                >
+                  سنوي
+                </button>
+                <button
+                  onClick={() => { setSalesView("month"); }}
+                  className={`px-3 py-1 transition-colors ${salesView === "month" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                >
+                  شهري
+                </button>
+              </div>
+            </div>
           </div>
-          {s.recentTodayTx.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-28 text-muted-foreground gap-2">
-              <Box size={28} className="opacity-30" />
-              <p className="text-sm">لا توجد معاملات اليوم</p>
-            </div>
+
+          {/* Chart */}
+          {salesView === "year" ? (
+            monthlySales && monthlySales.some(m => m.sales > 0) ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={monthlySales} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="oklch(0.55 0.18 250)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="oklch(0.55 0.18 250)" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0 0 / 0.3)" />
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} interval={0} />
+                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 10, fontSize: 12, border: "1px solid oklch(0.85 0 0)" }}
+                    labelStyle={{ fontWeight: "bold" }}
+                    formatter={(v: number) => [`${fmtNum(v, 0)} د.إ`, "المبيعات"]}
+                  />
+                  <Area type="monotone" dataKey="sales" stroke="oklch(0.55 0.18 250)" strokeWidth={2}
+                    fill="url(#salesGradient)" dot={{ r: 3, fill: "oklch(0.55 0.18 250)", strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">لا توجد بيانات</div>
+            )
           ) : (
-            <div className="space-y-2">
-              {s.recentTodayTx.map((tx, i) => (
-                <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted/50 transition-colors">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${tx.transactionType === "IN" ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600" : "bg-red-50 dark:bg-red-950/40 text-red-600"}`}>
-                    {tx.transactionType === "IN" ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{tx.materialName || "—"}</p>
-                    <p className="text-xs text-muted-foreground">{fmtTime(tx.createdAt)}</p>
-                  </div>
-                  <div className={`text-sm font-bold number-display ${tx.transactionType === "IN" ? "text-emerald-600" : "text-red-600"}`}>
-                    {tx.transactionType === "IN" ? "+" : "-"}{fmtNum(tx.quantity, 2)} {tx.unit}
-                  </div>
-                </div>
-              ))}
-            </div>
+            dailySalesData && dailySalesData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={dailySalesData} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="dailyGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="oklch(0.55 0.18 150)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="oklch(0.55 0.18 150)" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.9 0 0 / 0.3)" />
+                  <XAxis dataKey="day" tick={{ fontSize: 10 }} tickFormatter={v => `${v}`} />
+                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: 10, fontSize: 12, border: "1px solid oklch(0.85 0 0)" }}
+                    labelStyle={{ fontWeight: "bold" }}
+                    labelFormatter={(label) => `يوم ${label}`}
+                    formatter={(v: number) => [`${fmtNum(v, 0)} د.إ`, "المبيعات"]}
+                  />
+                  <Area type="monotone" dataKey="sales" stroke="oklch(0.55 0.18 150)" strokeWidth={2}
+                    fill="url(#dailyGradient)" dot={{ r: 3, fill: "oklch(0.55 0.18 150)", strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">لا توجد بيانات لهذا الشهر</div>
+            )
           )}
         </div>
+
       </div>
 
-      {/* ── Row 5: Today's Summary Cards ── */}
-      <div>
-        <SectionHeader title="ملخص اليوم" sub="مقارنة سريعة لأداء اليوم" icon={<Activity size={16} />} />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 number-display">{s.todayKitchen.uniqueItems}</p>
-            <p className="text-xs text-muted-foreground mt-1">صنف في المطبخ</p>
-          </div>
-          <div className="bg-gradient-to-br from-red-500/10 to-red-600/5 border border-red-500/20 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-bold text-red-600 dark:text-red-400 number-display">{fmtAED((s.todayWaste as any).totalWasteCost ?? s.todayWaste.wasteCost)}</p>
-            <p className="text-xs text-muted-foreground mt-1">هدر اليوم</p>
-            {((s.todayWaste as any).kitchenWasteCost ?? 0) > 0 && (
-              <p className="text-xs text-red-400/70 mt-0.5">
-                مطبخ: {fmtAED((s.todayWaste as any).kitchenWasteCost)}
-              </p>
-            )}
-          </div>
-          <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border border-emerald-500/20 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 number-display">{s.todayTx.inCount + s.todayTx.outCount}</p>
-            <p className="text-xs text-muted-foreground mt-1">معاملة اليوم</p>
-          </div>
-          <div className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border border-amber-500/20 rounded-2xl p-4 text-center">
-            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 number-display">{totalAlerts}</p>
-            <p className="text-xs text-muted-foreground mt-1">تنبيه مخزون</p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Row 6: Quick Actions ── */}
-      <div>
-        <SectionHeader title="إجراءات سريعة" icon={<TrendingUp size={16} />} />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { href: "/kitchen", label: "إنتاج المطبخ", icon: <ChefHat size={18} />, color: "bg-purple-500 hover:bg-purple-600" },
-            { href: "/stock-in", label: "إدخال مخزون", icon: <TrendingUp size={18} />, color: "bg-emerald-500 hover:bg-emerald-600" },
-            { href: "/invoices", label: "الفواتير", icon: <ShoppingCart size={18} />, color: "bg-blue-500 hover:bg-blue-600" },
-            { href: "/reports", label: "التقارير", icon: <BarChart3 size={18} />, color: "bg-slate-600 hover:bg-slate-700" },
-          ].map((action) => (
-            <Link key={action.href} href={action.href}>
-              <div className={`flex items-center gap-3 p-4 rounded-xl text-white font-medium text-sm cursor-pointer transition-colors shadow-sm ${action.color}`}>
-                {action.icon}
-                <span>{action.label}</span>
-              </div>
-            </Link>
-           ))}
-        </div>
-      </div>
     </div>
   );
 }

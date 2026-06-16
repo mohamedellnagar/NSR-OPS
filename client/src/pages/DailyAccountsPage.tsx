@@ -612,6 +612,14 @@ export default function DailyAccountsPage() {
                 <th className="text-center px-3 py-2 font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border-l" colSpan={4}>التوريدات</th>
                 {/* Net */}
                 <th className="text-center px-3 py-2 font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 border-l" rowSpan={2}>الصافي</th>
+                {/* Staff Meals */}
+                <th className="text-center px-3 py-2 font-bold text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/20 border-l" rowSpan={2}>أكل الأصناف</th>
+                {/* Stock Value */}
+                <th className="text-center px-3 py-2 font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/20 border-l" rowSpan={2}>مخزون آخر المدة</th>
+                {/* COGS */}
+                <th className="text-center px-3 py-2 font-bold text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/20 border-l" rowSpan={2}>تكلفة البضاعة</th>
+                {/* COGS % */}
+                <th className="text-center px-3 py-2 font-bold text-orange-600 dark:text-orange-400 bg-orange-50/60 dark:bg-orange-950/10 border-l" rowSpan={2}>%</th>
                 {/* Actions */}
                 <th className="text-center px-3 py-2 font-bold text-muted-foreground bg-muted/40" rowSpan={2}>إجراءات</th>
               </tr>
@@ -640,6 +648,7 @@ export default function DailyAccountsPage() {
             </thead>
             <tbody>
               {accounts.map((a, idx) => {
+                const cumSales = accounts.slice(0, idx + 1).reduce((s, r) => s + r.totalSales, 0);
                 const exp = monthExpenses[a.accountDate];
                 // إذا كان اليوم مخزّن يدوياً (1-12 أبريل): نستخدم expensesOperational/expensesMaintenance
                 const hasManual = parseFloat(String(a.expensesOperational ?? 0)) > 0 || parseFloat(String(a.expensesMaintenance ?? 0)) > 0;
@@ -696,6 +705,33 @@ export default function DailyAccountsPage() {
                     <td className={`px-3 py-2.5 text-center font-bold border-l ${isNeg ? 'text-red-600 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                       {isNeg ? '-' : ''}{fmt(Math.abs(netDay))}
                     </td>
+                    {/* Staff Meals */}
+                    <td className="px-2 py-2.5 text-center text-purple-700 dark:text-purple-300 bg-purple-50/30 dark:bg-purple-950/10 border-l text-sm">
+                      {(a as any).staffMeals != null && parseFloat((a as any).staffMeals) > 0 ? fmt(parseFloat((a as any).staffMeals)) : <span className="opacity-30">—</span>}
+                    </td>
+                    {/* Stock Value */}
+                    <td className="px-2 py-2.5 text-center text-blue-700 dark:text-blue-300 bg-blue-50/30 dark:bg-blue-950/10 border-l text-sm">
+                      {(a as any).stockValue != null ? fmt(parseFloat((a as any).stockValue)) : <span className="opacity-30">—</span>}
+                    </td>
+                    {/* COGS */}
+                    {(() => {
+                      const cogs = (a as any).dailyCogs ?? 0;
+                      const cogsPercent = cumSales > 0 ? (cogs / cumSales) * 100 : 0;
+                      return (
+                        <>
+                          <td className="px-2 py-2.5 text-center font-bold text-orange-700 dark:text-orange-300 bg-orange-50/40 dark:bg-orange-950/10 border-l">
+                            {cogs > 0 ? fmt(cogs) : <span className="opacity-30">—</span>}
+                          </td>
+                          <td className="px-2 py-2.5 text-center text-xs font-semibold bg-orange-50/20 dark:bg-orange-950/5 border-l">
+                            {cogs > 0 && cumSales > 0 ? (
+                              <span className={cogsPercent > 40 ? 'text-red-500' : cogsPercent > 30 ? 'text-amber-500' : 'text-emerald-600'}>
+                                {cogsPercent.toFixed(1)}%
+                              </span>
+                            ) : <span className="opacity-30">—</span>}
+                          </td>
+                        </>
+                      );
+                    })()}
                     {/* Actions */}
                     <td className="px-3 py-2.5 text-center">
                       <div className="flex items-center justify-center gap-1">
@@ -792,6 +828,28 @@ export default function DailyAccountsPage() {
                   <td className={`px-3 py-3 text-center border-l ${monthTotalSales - monthTotalExpenses < 0 ? 'text-red-700' : 'text-emerald-700'}`}>
                     {monthTotalSales - monthTotalExpenses < 0 ? '-' : ''}{fmt(Math.abs(monthTotalSales - monthTotalExpenses))}
                   </td>
+                  <td className="px-2 py-3 text-center border-l text-purple-700 font-semibold">
+                    {(() => { const t = accounts.reduce((s,a) => s + (parseFloat((a as any).staffMeals ?? '0') || 0), 0); return t > 0 ? fmt(t) : '—'; })()}
+                  </td>
+                  <td className="px-2 py-3 text-center border-l text-muted-foreground">—</td>
+                  {(() => {
+                    const totalCogs = accounts.reduce((s, a) => s + ((a as any).dailyCogs ?? 0), 0);
+                    const cogsPercent = monthTotalSales > 0 ? (totalCogs / monthTotalSales) * 100 : 0;
+                    return (
+                      <>
+                        <td className="px-2 py-3 text-center font-bold text-orange-700 dark:text-orange-300 bg-orange-100/60 dark:bg-orange-950/20 border-l">
+                          {totalCogs > 0 ? fmt(totalCogs) : '—'}
+                        </td>
+                        <td className="px-2 py-3 text-center text-xs font-semibold bg-orange-50/40 border-l">
+                          {totalCogs > 0 && monthTotalSales > 0 ? (
+                            <span className={cogsPercent > 40 ? 'text-red-500' : cogsPercent > 30 ? 'text-amber-500' : 'text-emerald-600'}>
+                              {cogsPercent.toFixed(1)}%
+                            </span>
+                          ) : '—'}
+                        </td>
+                      </>
+                    );
+                  })()}
                   <td className="px-3 py-3"></td>
                 </tr>
               )}

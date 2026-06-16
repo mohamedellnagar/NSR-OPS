@@ -84,7 +84,9 @@ export interface DailyFormState {
   supplyToRestaurant: string;
   supplyToManagement: string;
   supplyExtra: string;
+  staffMeals: string;
   notes: string;
+  stockValue: string;
 }
 
 export const emptyDailyForm = (date?: string): DailyFormState => ({
@@ -100,7 +102,9 @@ export const emptyDailyForm = (date?: string): DailyFormState => ({
   supplyToRestaurant: "",
   supplyToManagement: "",
   supplyExtra: "",
+  staffMeals: "",
   notes: "",
+  stockValue: "",
 });
 
 // ─── Expense Categories ───────────────────────────────────────────────────────
@@ -386,7 +390,9 @@ export default function DailyAccountDialog({
       supplyToRestaurant: toStr(existingDay.supplyToRestaurant),
       supplyToManagement: toStr(existingDay.supplyToManagement),
       supplyExtra: toStr(existingDay.supplyExtra),
+      staffMeals: toStr((existingDay as any).staffMeals),
       notes: existingDay.notes ?? "",
+      stockValue: toStr((existingDay as any).stockValue),
     }));
   }
   // عند تغيير التاريخ ليوم غير موجود: إعادة تعيين lastLoadedDate
@@ -450,7 +456,9 @@ export default function DailyAccountDialog({
       supplyToRestaurant: toNum(form.supplyToRestaurant),
       supplyToManagement: toNum(form.supplyToManagement),
       supplyExtra: toNum(form.supplyExtra),
+      staffMeals: form.staffMeals !== "" ? toNum(form.staffMeals) : undefined,
       notes: form.notes || undefined,
+      stockValue: form.stockValue !== "" ? toNum(form.stockValue) : undefined,
       // بيانات إضافية لرسالة واتساب
       expensesSupplierInvoices,
       expensesFreeInvoices: expensesFreeInvoicesTotal,
@@ -703,6 +711,19 @@ export default function DailyAccountDialog({
                     placeholder="0"
                     value={form.expensesFixed}
                     onChange={(e) => setForm((f) => ({ ...f, expensesFixed: e.target.value }))}
+                    className="mt-1 h-9"
+                  />
+                </div>
+                {/* Staff Meals */}
+                <div>
+                  <Label className="text-xs text-muted-foreground">أكل الأصناف (وجبات الموظفين)</Label>
+                  <Input
+                    type="number"
+                    step="0.001"
+                    min="0"
+                    placeholder="0"
+                    value={form.staffMeals}
+                    onChange={(e) => setForm((f) => ({ ...f, staffMeals: e.target.value }))}
                     className="mt-1 h-9"
                   />
                 </div>

@@ -5445,6 +5445,19 @@ export async function saveDailyAccount(data: {
     .where(eq(dailyAccounts.accountDate, data.accountDate))
     .limit(1);
 
+  // قيمة المخزون: لو المستخدم أدخلها يدوياً استخدمها، وإلا اجلبها من المخزون الحي
+  let stockValueNow: number;
+  if (data.stockValue != null && data.stockValue > 0) {
+    stockValueNow = data.stockValue;
+  } else if (existing.length === 0) {
+    // يوم جديد بدون إدخال يدوي → اجلب من المخزون الحي
+    const invKpisNow = await getInventoryKpis();
+    stockValueNow = invKpisNow.totalInventoryValue;
+  } else {
+    // تعديل يوم قديم بدون إدخال يدوي → لا تغيّر الـ stockValue المحفوظ
+    stockValueNow = 0;
+  }
+
   const values = {
     salesCash: data.salesCash.toFixed(3),
     salesCard: data.salesCard.toFixed(3),
@@ -5457,12 +5470,20 @@ export async function saveDailyAccount(data: {
     supplyToRestaurant: data.supplyToRestaurant.toFixed(3),
     supplyToManagement: data.supplyToManagement.toFixed(3),
     supplyExtra: data.supplyExtra.toFixed(3),
+    staffMeals: data.staffMeals != null ? data.staffMeals.toFixed(3) : null,
     notes: data.notes ?? null,
     carryForwardToNext: carryToNext.toFixed(3),
+    stockValue: stockValueNow > 0 ? stockValueNow.toFixed(3) : null,
   };
 
   if (existing.length > 0) {
-    await db.update(dailyAccounts).set(values).where(eq(dailyAccounts.id, existing[0].id));
+    // عند التعديل: نحدّث stockValue فقط لو المستخدم أدخله يدوياً
+    if (data.stockValue != null && data.stockValue > 0) {
+      await db.update(dailyAccounts).set(values).where(eq(dailyAccounts.id, existing[0].id));
+    } else {
+      const { stockValue: _sv, ...updateValues } = values;
+      await db.update(dailyAccounts).set(updateValues).where(eq(dailyAccounts.id, existing[0].id));
+    }
     return existing[0].id;
   } else {
     const [result] = await db.insert(dailyAccounts).values({
@@ -5474,10 +5495,101 @@ export async function saveDailyAccount(data: {
   }
 }
 
+// تحسب COGS التراكمي لكل يوم في الشهر:
+// COGS(يوم N) = مخزون أول الشهر + تشغيلية من أول الشهر لحد اليوم N - stockValue المحفوظ ليوم N
+// إذا لم يكن stockValue محفوظاً، يستخدم قيمة المخزون الحي (للأيام القديمة قبل الميزة)
+async function _calcDailyCogsCumulative(
+  year: number, month: number, dates: string[], savedStockValues: Record<string, number | null>
+): Promise<Record<string, number>> {
+  if (dates.length === 0) return {};
+  const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+  try {
+    const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+
+    // مخزون أول المدة
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear  = month === 1 ? year - 1 : year;
+    const [prevSnapRows] = await conn.query<any[]>(
+      `SELECT totalValue FROM monthly_stock_snapshots WHERE year=? AND month=?`,
+      [prevYear, prevMonth]
+    );
+    let openingStock = parseFloat((prevSnapRows as any[])[0]?.totalValue) || 0;
+    if (!openingStock) {
+      const [settRows] = await conn.query<any[]>(
+        `SELECT openingStockValue FROM app_settings WHERE id=1`
+      );
+      openingStock = parseFloat((settRows as any[])[0]?.openingStockValue) || 0;
+    }
+
+    // لا يوجد fallback — الأيام التي ليس لها stockValue محفوظ لا يُحسب لها COGS
+
+    // التشغيلية التراكمية لكل يوم (موردين + حرة) من أول الشهر لحد ذلك اليوم
+    const lastDate = dates[dates.length - 1];
+    const toDateStr = (v: any): string => {
+      if (v instanceof Date) return v.toISOString().slice(0, 10);
+      return String(v).slice(0, 10);
+    };
+    const [invRows] = await conn.query<any[]>(
+      `SELECT DATE_FORMAT(CONVERT_TZ(invoiceDate,'+00:00','+04:00'),'%Y-%m-%d') as day,
+              COALESCE(SUM(totalAmount),0) as total
+       FROM invoices
+       WHERE expenseCategory='operational'
+         AND DATE(CONVERT_TZ(invoiceDate,'+00:00','+04:00')) >= ?
+         AND DATE(CONVERT_TZ(invoiceDate,'+00:00','+04:00')) <= ?
+       GROUP BY day ORDER BY day`,
+      [monthStart, lastDate]
+    );
+    const [freeRows] = await conn.query<any[]>(
+      `SELECT DATE_FORMAT(CONVERT_TZ(date,'+00:00','+04:00'),'%Y-%m-%d') as day,
+              COALESCE(SUM(totalAmount),0) as total
+       FROM free_invoices
+       WHERE expenseCategory='operational'
+         AND DATE(CONVERT_TZ(date,'+00:00','+04:00')) >= ?
+         AND DATE(CONVERT_TZ(date,'+00:00','+04:00')) <= ?
+       GROUP BY day ORDER BY day`,
+      [monthStart, lastDate]
+    );
+
+    // تجميع التشغيلية اليومية
+    const dailyOpEx: Record<string, number> = {};
+    for (const r of invRows as any[]) {
+      const k = toDateStr(r.day);
+      dailyOpEx[k] = (dailyOpEx[k] ?? 0) + (parseFloat(r.total) || 0);
+    }
+    for (const r of freeRows as any[]) {
+      const k = toDateStr(r.day);
+      dailyOpEx[k] = (dailyOpEx[k] ?? 0) + (parseFloat(r.total) || 0);
+    }
+
+    // حساب التراكمي لكل يوم
+    const result: Record<string, number> = {};
+    let cumulativeOpEx = 0;
+    const sortedDates = [...dates].sort();
+    const allDaysInRange = Object.keys(dailyOpEx)
+      .filter(d => d >= monthStart && d <= sortedDates[sortedDates.length - 1])
+      .sort();
+    let opExPointer = 0;
+    for (const date of sortedDates) {
+      while (opExPointer < allDaysInRange.length && allDaysInRange[opExPointer] <= date) {
+        cumulativeOpEx += dailyOpEx[allDaysInRange[opExPointer]] ?? 0;
+        opExPointer++;
+      }
+      // لو مفيش stockValue محفوظ → لا يُحسب COGS لهذا اليوم
+      if (savedStockValues[date] == null) continue;
+      const dayInventory = savedStockValues[date] as number;
+      const cogs = openingStock + cumulativeOpEx - dayInventory;
+      result[date] = cogs > 0 ? cogs : 0;
+    }
+
+    return result;
+  } finally {
+    await conn.end();
+  }
+}
+
 export async function getDailyAccounts(params: { year: number; month: number }) {
   const db = await getDb();
   if (!db) return [];
-  // Date range for the month
   const startDate = `${params.year}-${String(params.month).padStart(2, "0")}-01`;
   const endDate = `${params.year}-${String(params.month).padStart(2, "0")}-31`;
 
@@ -5492,7 +5604,7 @@ export async function getDailyAccounts(params: { year: number; month: number }) 
     )
     .orderBy(dailyAccounts.accountDate);
 
-  return rows.map((r) => ({
+  const mappedRows = rows.map((r) => ({
     ...r,
     totalSales:
       parseFloat(r.salesCash) +
@@ -5502,6 +5614,20 @@ export async function getDailyAccounts(params: { year: number; month: number }) 
       parseFloat(r.salesNoon) +
       parseFloat(r.salesDeliveroo) +
       parseFloat(r.salesCareem),
+  }));
+
+  // تكلفة البضاعة التراكمية لكل يوم
+  // COGS(يوم N) = مخزون أول الشهر + تشغيلية من أول الشهر لحد اليوم N - stockValue المحفوظ لذلك اليوم
+  const dates = mappedRows.map(r => r.accountDate);
+  const savedStockValues: Record<string, number | null> = {};
+  for (const r of mappedRows) {
+    savedStockValues[r.accountDate] = r.stockValue != null ? parseFloat(String(r.stockValue)) : null;
+  }
+  const cogsByDay = await _calcDailyCogsCumulative(params.year, params.month, dates, savedStockValues);
+
+  return mappedRows.map((r) => ({
+    ...r,
+    dailyCogs: cogsByDay[r.accountDate] ?? 0,
   }));
 }
 
@@ -6741,5 +6867,76 @@ export async function getLatestSavedMenu() {
   return rows[0] ?? null;
 }
 
+export async function getDailySalesForMonth(monthKey: string): Promise<{
+  day: string;    // "1", "2", ... "31"
+  date: string;   // "YYYY-MM-DD"
+  sales: number;
+}[]> {
+  const conn = await getRawConn();
+  try {
+    const [rows] = await conn.execute(`
+      SELECT
+        accountDate as date,
+        DAY(accountDate) as dayNum,
+        COALESCE(salesCash + salesCard + salesKita + salesOrders + salesNoon + salesDeliveroo + salesCareem, 0) as dailySales
+      FROM daily_accounts
+      WHERE DATE_FORMAT(accountDate, '%Y-%m') = ?
+      ORDER BY accountDate ASC
+    `, [monthKey]) as any;
+
+    return (rows as any[]).map((r: any) => ({
+      day: String(r.dayNum),
+      date: String(r.date).slice(0, 10),
+      sales: parseFloat(r.dailySales) || 0,
+    }));
+  } finally {
+    await conn.end();
+  }
+}
+
+export async function getMonthlySalesChart(): Promise<{
+  month: string;   // "يناير", "فبراير", etc.
+  monthKey: string; // "YYYY-MM"
+  sales: number;
+}[]> {
+  const conn = await getRawConn();
+  try {
+    const [rows] = await conn.execute(`
+      SELECT
+        DATE_FORMAT(accountDate, '%Y-%m') as monthKey,
+        COALESCE(SUM(salesCash + salesCard + salesKita + salesOrders + salesNoon + salesDeliveroo + salesCareem), 0) as totalSales
+      FROM daily_accounts
+      WHERE accountDate >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 11 MONTH), '%Y-%m-01')
+      GROUP BY monthKey
+      ORDER BY monthKey ASC
+    `) as any;
+
+    const ARABIC_MONTHS: Record<string, string> = {
+      '01': 'يناير', '02': 'فبراير', '03': 'مارس', '04': 'أبريل',
+      '05': 'مايو', '06': 'يونيو', '07': 'يوليو', '08': 'أغسطس',
+      '09': 'سبتمبر', '10': 'أكتوبر', '11': 'نوفمبر', '12': 'ديسمبر',
+    };
+
+    // Fill all 12 months even if no data
+    const result: { month: string; monthKey: string; sales: number }[] = [];
+    const dataByMonth: Record<string, number> = {};
+    for (const r of rows as any[]) {
+      dataByMonth[String(r.monthKey)] = parseFloat(r.totalSales) || 0;
+    }
+
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(1);
+      d.setMonth(d.getMonth() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const mm = key.slice(5, 7);
+      result.push({ month: ARABIC_MONTHS[mm] ?? mm, monthKey: key, sales: dataByMonth[key] ?? 0 });
+    }
+
+    return result;
+  } finally {
+    await conn.end();
+  }
+}
 
 
