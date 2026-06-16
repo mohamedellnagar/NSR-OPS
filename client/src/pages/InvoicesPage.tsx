@@ -1184,13 +1184,27 @@ export default function InvoicesPage() {
                           {ar ? cfg.labelAr : cfg.labelEn}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                        {inv.paidAt
-                          ? new Date(inv.paidAt).toLocaleString(ar ? "ar-AE" : "en-AE", {
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {inv.paymentHistory && inv.paymentHistory.length > 1 ? (
+                          <div className="space-y-1">
+                            {inv.paymentHistory.map((ph: any, idx: number) => (
+                              <div key={ph.id ?? idx} className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className="font-medium text-emerald-600">{fmtCurrency(ph.paidAmount, ar)}</span>
+                                <span className="text-muted-foreground/50">·</span>
+                                <span>{new Date(ph.paymentDate).toLocaleDateString(ar ? "ar-AE" : "en-AE", { year: "numeric", month: "2-digit", day: "2-digit" })}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : inv.paidAt ? (
+                          <span className="whitespace-nowrap">
+                            {new Date(inv.paidAt).toLocaleString(ar ? "ar-AE" : "en-AE", {
                               year: "numeric", month: "2-digit", day: "2-digit",
                               hour: "2-digit", minute: "2-digit", hour12: false,
-                            })
-                          : <span className="text-muted-foreground/50">—</span>}
+                            })}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1 flex-wrap">
@@ -2248,13 +2262,27 @@ function FreeInvoicesSection({ ar, isRTL }: { ar: boolean; isRTL: boolean }) {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                        {inv.paidAt
-                          ? new Date(inv.paidAt).toLocaleString(ar ? "ar-AE" : "en-AE", {
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {inv.paymentHistory && inv.paymentHistory.length > 1 ? (
+                          <div className="space-y-1">
+                            {inv.paymentHistory.map((ph: any, idx: number) => (
+                              <div key={ph.id ?? idx} className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className="font-medium text-emerald-600">{fmtCurrency(ph.paidAmount, ar)}</span>
+                                <span className="text-muted-foreground/50">·</span>
+                                <span>{new Date(ph.paymentDate).toLocaleDateString(ar ? "ar-AE" : "en-AE", { year: "numeric", month: "2-digit", day: "2-digit" })}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : inv.paidAt ? (
+                          <span className="whitespace-nowrap">
+                            {new Date(inv.paidAt).toLocaleString(ar ? "ar-AE" : "en-AE", {
                               year: "numeric", month: "2-digit", day: "2-digit",
                               hour: "2-digit", minute: "2-digit", hour12: false,
-                            })
-                          : <span className="text-muted-foreground/50">—</span>}
+                            })}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">

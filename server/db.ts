@@ -937,7 +937,7 @@ export async function listInvoices(filters?: {
     conditions.push(lte(invoices.invoiceDate, end));
   }
 
-  return db
+  const invoiceList = await db
     .select({
       id: invoices.id,
       invoiceNumber: invoices.invoiceNumber,
@@ -958,6 +958,30 @@ export async function listInvoices(filters?: {
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .orderBy(desc(invoices.invoiceDate))
     .limit(filters?.limit ?? 200);
+
+  if (invoiceList.length === 0) return [];
+
+  // Batch-fetch payment history for all invoices in one query
+  const ids = invoiceList.map(i => i.id);
+  const allPayments = await db
+    .select()
+    .from(invoicePaymentHistory)
+    .where(and(
+      inArray(invoicePaymentHistory.invoiceId, ids),
+      eq(invoicePaymentHistory.invoiceType, "supplier")
+    ))
+    .orderBy(invoicePaymentHistory.paymentDate);
+
+  const historyMap = new Map<number, typeof allPayments>();
+  for (const ph of allPayments) {
+    if (!historyMap.has(ph.invoiceId)) historyMap.set(ph.invoiceId, []);
+    historyMap.get(ph.invoiceId)!.push(ph);
+  }
+
+  return invoiceList.map(inv => ({
+    ...inv,
+    paymentHistory: historyMap.get(inv.id) ?? [],
+  }));
 }
 
 export async function getInvoiceById(id: number) {
