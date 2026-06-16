@@ -15,10 +15,18 @@ const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "matjari-s
 
 async function authenticateCustom(req: CreateExpressContextOptions["req"]): Promise<User | null> {
   try {
-    const cookieHeader = req.headers.cookie;
-    if (!cookieHeader) return null;
-    const cookies = parseCookieHeader(cookieHeader);
-    const token = cookies[COOKIE_NAME];
+    // Bearer token (mobile app)
+    const authHeader = req.headers.authorization;
+    let token: string | undefined;
+    if (authHeader?.startsWith("Bearer ")) {
+      token = authHeader.slice(7);
+    } else {
+      // Cookie (web app)
+      const cookieHeader = req.headers.cookie;
+      if (!cookieHeader) return null;
+      const cookies = parseCookieHeader(cookieHeader);
+      token = cookies[COOKIE_NAME];
+    }
     if (!token) return null;
     const { payload } = await jwtVerify(token, JWT_SECRET, { algorithms: ["HS256"] });
     const userId = parseInt(payload.sub as string, 10);
