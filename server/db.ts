@@ -5445,18 +5445,63 @@ export async function saveDailyAccount(data: {
     .where(eq(dailyAccounts.accountDate, data.accountDate))
     .limit(1);
 
-  // قيمة المخزون: لو المستخدم أدخلها يدوياً استخدمها، وإلا اجلبها من المخزون الحي
-  let stockValueNow: number;
-  if (data.stockValue != null && data.stockValue > 0) {
-    stockValueNow = data.stockValue;
-  } else if (existing.length === 0) {
-    // يوم جديد بدون إدخال يدوي → اجلب من المخزون الحي
-    const invKpisNow = await getInventoryKpis();
-    stockValueNow = invKpisNow.totalInventoryValue;
-  } else {
-    // تعديل يوم قديم بدون إدخال يدوي → لا تغيّر الـ stockValue المحفوظ
-    stockValueNow = 0;
-  }
+  // حساب نسبة الفود كوست في وقت الحفظ
+  let foodCostPercent: number | null = null;
+  try {
+    const conn2 = await getRawConn();
+    try {
+      const accountDateStr = data.accountDate;
+      const [yr, mo] = accountDateStr.split('-').map(Number);
+      const monthStart = `${yr}-${String(mo).padStart(2,'0')}-01`;
+
+      // مخزون أول الشهر
+      const [settRows] = await conn2.execute(`SELECT openingStockValue FROM app_settings WHERE id=1`) as any[];
+      const openingStock = parseFloat(settRows[0]?.openingStockValue ?? 0) || 0;
+
+      // إجمالي المصروفات التشغيلية التراكمية من أول الشهر لحد اليوم
+      const [opExRows] = await conn2.execute(
+        `SELECT COALESCE(SUM(totalAmount),0) as total FROM invoices
+         WHERE expenseCategory='operational'
+           AND DATE(CONVERT_TZ(invoiceDate,'+00:00','+04:00')) >= ?
+           AND DATE(CONVERT_TZ(invoiceDate,'+00:00','+04:00')) <= ?`,
+        [monthStart, accountDateStr]
+      ) as any[];
+      const [freeRows2] = await conn2.execute(
+        `SELECT COALESCE(SUM(totalAmount),0) as total FROM free_invoices
+         WHERE expenseCategory='operational'
+           AND DATE(CONVERT_TZ(date,'+00:00','+04:00')) >= ?
+           AND DATE(CONVERT_TZ(date,'+00:00','+04:00')) <= ?`,
+        [monthStart, accountDateStr]
+      ) as any[];
+      const cumOpEx = (parseFloat(opExRows[0]?.total) || 0) + (parseFloat(freeRows2[0]?.total) || 0);
+
+      // المخزون الحالي
+      const invKpisNow = await getInventoryKpis();
+      const currentInventory = invKpisNow.totalInventoryValue;
+
+      // المبيعات التراكمية من أول الشهر لحد اليوم (شاملة اليوم الحالي)
+      const [salesRows] = await conn2.execute(
+        `SELECT COALESCE(SUM(salesCash+salesCard+salesKita+salesOrders+salesNoon+salesDeliveroo+salesCareem),0) as total
+         FROM daily_accounts
+         WHERE accountDate >= ? AND accountDate < ?`,
+        [monthStart, accountDateStr]
+      ) as any[];
+      const prevSales = parseFloat(salesRows[0]?.total) || 0;
+      const todaySales = data.salesCash + data.salesCard + data.salesKita + data.salesOrders + data.salesNoon + data.salesDeliveroo + data.salesCareem;
+      const cumSales = prevSales + todaySales;
+
+      if (cumSales > 0) {
+        const cogs = openingStock + cumOpEx - currentInventory;
+        foodCostPercent = cogs > 0 ? parseFloat(((cogs / cumSales) * 100).toFixed(2)) : 0;
+      }
+    } finally {
+      await conn2.end();
+    }
+  } catch (_) { /* لو فشل الحساب نحفظ null */ }
+
+  // قيمة المخزون الحالي للحفظ
+  const invKpisForStock = await getInventoryKpis();
+  const stockValueNow = invKpisForStock.totalInventoryValue;
 
   const values = {
     salesCash: data.salesCash.toFixed(3),
@@ -5471,19 +5516,14 @@ export async function saveDailyAccount(data: {
     supplyToManagement: data.supplyToManagement.toFixed(3),
     supplyExtra: data.supplyExtra.toFixed(3),
     staffMeals: data.staffMeals != null ? data.staffMeals.toFixed(3) : null,
+    foodCostPercent: foodCostPercent != null ? String(foodCostPercent) : null,
     notes: data.notes ?? null,
     carryForwardToNext: carryToNext.toFixed(3),
     stockValue: stockValueNow > 0 ? stockValueNow.toFixed(3) : null,
   };
 
   if (existing.length > 0) {
-    // عند التعديل: نحدّث stockValue فقط لو المستخدم أدخله يدوياً
-    if (data.stockValue != null && data.stockValue > 0) {
-      await db.update(dailyAccounts).set(values).where(eq(dailyAccounts.id, existing[0].id));
-    } else {
-      const { stockValue: _sv, ...updateValues } = values;
-      await db.update(dailyAccounts).set(updateValues).where(eq(dailyAccounts.id, existing[0].id));
-    }
+    await db.update(dailyAccounts).set(values).where(eq(dailyAccounts.id, existing[0].id));
     return existing[0].id;
   } else {
     const [result] = await db.insert(dailyAccounts).values({

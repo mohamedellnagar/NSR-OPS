@@ -916,10 +916,13 @@ export const dailyAccounts = mysqlTable(
     // ── وجبات الموظفين ────────────────────────────────────────────────────────
     staffMeals: decimal("staffMeals", { precision: 12, scale: 3 }),
 
+    // ── نسبة الفود كوست المحفوظة وقت التسجيل ─────────────────────────────────
+    foodCostPercent: decimal("foodCostPercent", { precision: 6, scale: 2 }),
+
     // ── ملاحظات ───────────────────────────────────────────────────────────────
     notes: text("notes"),
 
-    // ── قيمة المخزون المحفوظة وقت التسجيل (لحساب COGS التاريخي) ──────────────
+    // ── قيمة المخزون المحفوظة وقت التسجيل ────────────────────────────────────
     stockValue: decimal("stockValue", { precision: 14, scale: 3 }),
 
     createdBy: int("createdBy").references(() => users.id),
