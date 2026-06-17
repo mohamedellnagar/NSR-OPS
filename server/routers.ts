@@ -4366,6 +4366,29 @@ ${statsContext}
             expensesFreeInvoices = parseFloat((freeRows as any[])[0]?.opEx) || 0;
           } finally { await conn3.end(); }
 
+          // حساب نسبة المطعم للشهر
+          const [yr, mo] = input.accountDate.split('-').map(Number);
+          const monthStart = `${yr}-${String(mo).padStart(2,'0')}-01`;
+          const conn4 = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+          let restaurantDiff: number | undefined;
+          try {
+            const [mRows] = await conn4.execute(
+              `SELECT
+                COALESCE(SUM(salesCash),0) as totalCash,
+                COALESCE(SUM(salesCash+salesCard+salesKita+salesOrders+salesNoon+salesDeliveroo+salesCareem),0) as totalSales,
+                COALESCE(SUM(supplyToRestaurant+supplyExtra-supplyToManagement),0) as totalSupply
+               FROM daily_accounts WHERE accountDate >= ? AND accountDate <= ?`,
+              [monthStart, input.accountDate]
+            ) as any[];
+            const r = (mRows as any[])[0];
+            const mTotalCash = parseFloat(r.totalCash) || 0;
+            const mTotalSales = parseFloat(r.totalSales) || 0;
+            const mTotalSupply = parseFloat(r.totalSupply) || 0;
+            const expected = mTotalSales / 2 - mTotalCash;
+            restaurantDiff = mTotalSupply - expected;
+          } catch(_) {}
+          finally { await conn4.end(); }
+
           console.log(`[DailyAccountNotif] Triggering notification for date: ${input.accountDate}`);
           return sendDailyAccountNotification({
             accountDate: input.accountDate,
@@ -4387,6 +4410,7 @@ ${statsContext}
             carryForwardToNext: input.carryForwardToNext ?? 0,
             staffMeals,
             foodCostPercent,
+            restaurantDiff,
             notes: input.notes,
             supplierInvoices: input.supplierInvoices,
             freeInvoices: input.freeInvoices,

@@ -53,6 +53,7 @@ export interface DailyAccountSummaryData {
   carryForwardToNext: number;
   staffMeals?: number;
   foodCostPercent?: number;
+  restaurantDiff?: number;
   notes?: string;
   // Detailed invoice data for PDF
   supplierInvoices?: DailyAccountPDFData["supplierInvoices"];
@@ -246,8 +247,12 @@ function buildDefaultMessage(data: DailyAccountSummaryData, inv?: InventorySnaps
   }
 
   // نسبة المطعم
-  lines.push(`\n💵 *نسبة المطعم: ${netRestaurant >= 0 ? "+" : ""}${fmt(netRestaurant)} د.إ*`);
-  lines.push(`  مرحّل من السابق: ${fmt(data.carryForwardFromPrev)}`);
+  if (data.restaurantDiff != null) {
+    const diff = data.restaurantDiff;
+    lines.push(`\n💵 *نسبة المطعم: ${diff >= 0 ? "+" : ""}${fmt(diff)} د.إ ${diff >= 0 ? "— للمطعم" : "— على المطعم"}*`);
+  } else {
+    lines.push(`\n💵 *الرصيد المرحّل: ${netRestaurant >= 0 ? "+" : ""}${fmt(netRestaurant)} د.إ*`);
+  }
 
   lines.push(`\n${"─".repeat(30)}`);
   if (data.notes) lines.push(`📝 ${data.notes}`);
