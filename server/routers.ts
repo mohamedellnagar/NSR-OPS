@@ -4332,9 +4332,12 @@ ${statsContext}
           } finally { await conn2.end(); }
         };
         fetchPrevCarry().then(async (prevCarry) => {
-          // جلب staffMeals و foodCostPercent المحفوظين
+          // جلب كل بيانات اليوم من DB مباشرة لضمان الدقة
           const conn3 = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
           let staffMeals = 0, foodCostPercent = 0;
+          let expensesSupplierInvoices = input.expensesSupplierInvoices ?? 0;
+          let expensesFreeInvoices = input.expensesFreeInvoices ?? 0;
+          let expensesPartial = input.expensesPartial ?? 0;
           try {
             const [daRows] = await conn3.execute(
               `SELECT staffMeals, foodCostPercent FROM daily_accounts WHERE accountDate=? LIMIT 1`,
@@ -4342,6 +4345,25 @@ ${statsContext}
             ) as any[];
             staffMeals = parseFloat((daRows as any[])[0]?.staffMeals ?? 0) || 0;
             foodCostPercent = parseFloat((daRows as any[])[0]?.foodCostPercent ?? 0) || 0;
+
+            // جلب المصروفات من الفواتير مباشرة
+            const [invRows] = await conn3.execute(
+              `SELECT
+                COALESCE(SUM(CASE WHEN expenseCategory='operational' THEN totalAmount ELSE 0 END),0) as opEx,
+                COALESCE(SUM(CASE WHEN expenseCategory='maintenance' THEN totalAmount ELSE 0 END),0) as mainEx
+               FROM invoices
+               WHERE DATE(CONVERT_TZ(invoiceDate,'+00:00','+04:00')) = ?`,
+              [input.accountDate]
+            ) as any[];
+            const [freeRows] = await conn3.execute(
+              `SELECT
+                COALESCE(SUM(CASE WHEN expenseCategory='operational' THEN totalAmount ELSE 0 END),0) as opEx
+               FROM free_invoices
+               WHERE DATE(CONVERT_TZ(date,'+00:00','+04:00')) = ?`,
+              [input.accountDate]
+            ) as any[];
+            expensesSupplierInvoices = parseFloat((invRows as any[])[0]?.opEx) || 0;
+            expensesFreeInvoices = parseFloat((freeRows as any[])[0]?.opEx) || 0;
           } finally { await conn3.end(); }
 
           console.log(`[DailyAccountNotif] Triggering notification for date: ${input.accountDate}`);
@@ -4355,9 +4377,9 @@ ${statsContext}
             salesDeliveroo: input.salesDeliveroo,
             salesCareem: input.salesCareem,
             expensesFixed: input.expensesFixed,
-            expensesSupplierInvoices: input.expensesSupplierInvoices ?? 0,
-            expensesFreeInvoices: input.expensesFreeInvoices ?? 0,
-            expensesPartial: input.expensesPartial ?? 0,
+            expensesSupplierInvoices,
+            expensesFreeInvoices,
+            expensesPartial,
             supplyToRestaurant: input.supplyToRestaurant,
             supplyToManagement: input.supplyToManagement,
             supplyExtra: input.supplyExtra,
