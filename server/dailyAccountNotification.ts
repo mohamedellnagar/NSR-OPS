@@ -51,11 +51,68 @@ export interface DailyAccountSummaryData {
   supplyExtra: number;
   carryForwardFromPrev: number;
   carryForwardToNext: number;
+  staffMeals?: number;
+  foodCostPercent?: number;
   notes?: string;
   // Detailed invoice data for PDF
   supplierInvoices?: DailyAccountPDFData["supplierInvoices"];
   freeInvoices?: DailyAccountPDFData["freeInvoices"];
   partialInvoices?: DailyAccountPDFData["partialInvoices"];
+}
+
+interface InventorySnapshot {
+  totalValue: number;
+  chicken1100: number;
+  chicken1200: number;
+  chicken1300: number;
+  chickenKilo: number;
+  beef: number;
+  indianMeat: number;
+  coal: number;
+  gas: number;
+  basmatiRice: number;
+  rice: number;
+  pasta: number;
+}
+
+async function fetchInventorySnapshot(conn: mysql.Connection): Promise<InventorySnapshot> {
+  const [rows] = await conn.execute(
+    `SELECT name, currentQuantity, lastPurchasePrice FROM raw_materials WHERE isActive=1`
+  ) as any[];
+  const [butcherRows] = await conn.execute(
+    `SELECT COALESCE(SUM(currentStock * pricePerUnit),0) AS butcherValue FROM butcher_products WHERE isActive=1`
+  ) as any[];
+  const [mfgRows] = await conn.execute(
+    `SELECT COALESCE(SUM(t.closingBalance * COALESCE(t.actualUnitCost,0)),0) AS mfgValue
+     FROM kitchen_daily_production t
+     INNER JOIN (SELECT productName, MAX(productionDate) AS maxDate FROM kitchen_daily_production GROUP BY productName) latest
+     ON t.productName = latest.productName AND t.productionDate = latest.maxDate`
+  ) as any[];
+
+  let rawTotal = 0;
+  const snap: InventorySnapshot = { totalValue: 0, chicken1100: 0, chicken1200: 0, chicken1300: 0, chickenKilo: 0, beef: 0, indianMeat: 0, coal: 0, gas: 0, basmatiRice: 0, rice: 0, pasta: 0 };
+
+  for (const r of rows as any[]) {
+    const qty = parseFloat(r.currentQuantity ?? 0) || 0;
+    const price = parseFloat(r.lastPurchasePrice ?? 0) || 0;
+    if (qty > 0) rawTotal += qty * price;
+    const name = (r.name ?? "").trim();
+    if (name === "دجاج 1100")    snap.chicken1100  = qty;
+    if (name === "دجاج 1200")    snap.chicken1200  = qty;
+    if (name === "دجاج 1300")    snap.chicken1300  = qty;
+    if (name === "دجاج كيلو")   snap.chickenKilo  = qty;
+    if (name === "Beef")          snap.beef         = qty;
+    if (name === "Indian Meat")   snap.indianMeat   = qty;
+    if (name === "Coal")          snap.coal         = qty;
+    if (name === "Gas")           snap.gas          = qty;
+    if (name === "Basmati Rice")  snap.basmatiRice  = qty;
+    if (name === "Rice")          snap.rice         = qty;
+    if (name === "Pasta")         snap.pasta        = qty;
+  }
+  const butcherVal = parseFloat((butcherRows as any[])[0]?.butcherValue) || 0;
+  const mfgVal = parseFloat((mfgRows as any[])[0]?.mfgValue) || 0;
+  snap.totalValue = rawTotal + butcherVal + mfgVal;
+  return snap;
 }
 
 /**
@@ -103,69 +160,98 @@ function applyTemplate(template: string, data: DailyAccountSummaryData): string 
 /**
  * Build a default message when no template is saved.
  */
-function buildDefaultMessage(data: DailyAccountSummaryData): string {
+function buildDefaultMessage(data: DailyAccountSummaryData, inv?: InventorySnapshot): string {
   const totalSales =
     data.salesCash + data.salesCard + data.salesKita +
     data.salesOrders + data.salesNoon + data.salesDeliveroo + data.salesCareem;
 
-  const totalExpenses =
-    data.expensesFixed + data.expensesSupplierInvoices + data.expensesFreeInvoices + (data.expensesPartial ?? 0);
+  const totalOpEx = data.expensesSupplierInvoices + data.expensesFreeInvoices + (data.expensesPartial ?? 0);
+  const totalNonOpEx = data.expensesFixed;
+  const totalExpenses = totalOpEx + totalNonOpEx;
+  const netRestaurant = data.carryForwardToNext;
 
   const lines: string[] = [];
-  lines.push(`📊 *ملخص بيانات اليوم*`);
-  lines.push(`📅 ${formatDateAr(data.accountDate)}`);
-  lines.push(`${"─".repeat(28)}`);
+  lines.push(`📊 *ملخص يوم ${formatDateAr(data.accountDate)}*`);
+  lines.push(`${"─".repeat(30)}`);
 
   // المبيعات
-  lines.push(`\n💰 *المبيعات اليومية*`);
-  if (data.salesCash > 0) lines.push(`  • نقدي: ${fmt(data.salesCash)} د.إ`);
-  if (data.salesCard > 0) lines.push(`  • بطاقة: ${fmt(data.salesCard)} د.إ`);
-  if (data.salesKita > 0) lines.push(`  • كيتا: ${fmt(data.salesKita)} د.إ`);
-  if (data.salesOrders > 0) lines.push(`  • أوردرز: ${fmt(data.salesOrders)} د.إ`);
-  if (data.salesNoon > 0) lines.push(`  • نون: ${fmt(data.salesNoon)} د.إ`);
-  if (data.salesDeliveroo > 0) lines.push(`  • ديليفرو: ${fmt(data.salesDeliveroo)} د.إ`);
-  if (data.salesCareem > 0) lines.push(`  • كريم: ${fmt(data.salesCareem)} د.إ`);
-  lines.push(`  ✅ *الإجمالي: ${fmt(totalSales)} د.إ*`);
+  lines.push(`\n💰 *إجمالي المبيعات: ${fmt(totalSales)} د.إ*`);
+  if (data.salesCash > 0)       lines.push(`  نقدي: ${fmt(data.salesCash)}`);
+  if (data.salesCard > 0)       lines.push(`  بطاقة: ${fmt(data.salesCard)}`);
+  if (data.salesKita > 0)       lines.push(`  كيتا: ${fmt(data.salesKita)}`);
+  if (data.salesOrders > 0)     lines.push(`  أوردرز: ${fmt(data.salesOrders)}`);
+  if (data.salesNoon > 0)       lines.push(`  نون: ${fmt(data.salesNoon)}`);
+  if (data.salesDeliveroo > 0)  lines.push(`  ديليفرو: ${fmt(data.salesDeliveroo)}`);
+  if (data.salesCareem > 0)     lines.push(`  كريم: ${fmt(data.salesCareem)}`);
 
   // المصروفات
-  if (totalExpenses > 0) {
-    lines.push(`\n🔴 *المصروفات*`);
-    if (data.expensesSupplierInvoices > 0)
-      lines.push(`  • موردين: ${fmt(data.expensesSupplierInvoices)} د.إ`);
-    if (data.expensesFreeInvoices > 0)
-      lines.push(`  • فواتير حرة: ${fmt(data.expensesFreeInvoices)} د.إ`);
-    if ((data.expensesPartial ?? 0) > 0)
-      lines.push(`  • دفع جزئي: ${fmt(data.expensesPartial ?? 0)} د.إ`);
-    if (data.expensesFixed > 0)
-      lines.push(`  • مصروفات ثابتة: ${fmt(data.expensesFixed)} د.إ`);
-    lines.push(`  ❌ *الإجمالي: ${fmt(totalExpenses)} د.إ*`);
+  lines.push(`\n🔴 *المصروفات*`);
+  if (totalOpEx > 0)   lines.push(`  تشغيلية: ${fmt(totalOpEx)} د.إ`);
+  if (totalNonOpEx > 0) lines.push(`  غير تشغيلية: ${fmt(totalNonOpEx)} د.إ`);
+  lines.push(`  *الإجمالي: ${fmt(totalExpenses)} د.إ*`);
+
+  // الفود كوست
+  if ((data.foodCostPercent ?? 0) > 0) {
+    const pct = data.foodCostPercent!;
+    const emoji = pct > 40 ? "🔴" : pct > 30 ? "🟡" : "🟢";
+    lines.push(`\n${emoji} *فود كوست: ${pct.toFixed(1)}%*`);
   }
 
-  // التوريدات
-  const hasSupply =
-    data.supplyToRestaurant > 0 || data.supplyToManagement > 0 || data.supplyExtra > 0;
-  if (hasSupply) {
-    lines.push(`\n🔄 *التوريدات*`);
-    if (data.supplyToRestaurant > 0)
-      lines.push(`  • للمطعم (+): ${fmt(data.supplyToRestaurant)} د.إ`);
-    if (data.supplyToManagement > 0)
-      lines.push(`  • للإدارة (-): ${fmt(data.supplyToManagement)} د.إ`);
-    if (data.supplyExtra > 0)
-      lines.push(`  • إضافي (+): ${fmt(data.supplyExtra)} د.إ`);
+  // المخزون
+  if (inv) {
+    lines.push(`\n📦 *المخزون الحالي: ${fmt(inv.totalValue)} د.إ*`);
+
+    // الدجاج
+    const chicken = [
+      { label: "دجاج 1100", qty: inv.chicken1100 },
+      { label: "دجاج 1200", qty: inv.chicken1200 },
+      { label: "دجاج 1300", qty: inv.chicken1300 },
+      { label: "دجاج كيلو", qty: inv.chickenKilo },
+    ].filter(x => x.qty > 0);
+    if (chicken.length > 0) {
+      lines.push(`  🐔 دجاج:`);
+      for (const c of chicken) lines.push(`    • ${c.label}: ${c.qty} قطعة`);
+    }
+
+    // اللحوم
+    const meats = [
+      { label: "لحم بقري",  qty: inv.beef,        unit: "kg" },
+      { label: "لحم هندي",  qty: inv.indianMeat,  unit: "kg" },
+    ].filter(x => x.qty > 0);
+    if (meats.length > 0) {
+      lines.push(`  🥩 لحوم:`);
+      for (const m of meats) lines.push(`    • ${m.label}: ${m.qty.toFixed(2)} ${m.unit}`);
+    }
+
+    // أخرى
+    const others = [
+      { label: "فحم", qty: inv.coal, unit: "قطعة" },
+      { label: "غاز", qty: inv.gas,  unit: "أسطوانة" },
+    ].filter(x => x.qty > 0);
+    if (others.length > 0) {
+      lines.push(`  🔥 أخرى:`);
+      for (const o of others) lines.push(`    • ${o.label}: ${o.qty} ${o.unit}`);
+    }
+
+    // الحبوب
+    const grains = [
+      { label: "أرز بسمتي", qty: inv.basmatiRice, unit: "kg" },
+      { label: "أرز",       qty: inv.rice,        unit: "kg" },
+      { label: "مكرونة",    qty: inv.pasta,       unit: "kg" },
+    ].filter(x => x.qty > 0);
+    if (grains.length > 0) {
+      lines.push(`  🌾 حبوب:`);
+      for (const g of grains) lines.push(`    • ${g.label}: ${g.qty.toFixed(2)} ${g.unit}`);
+    }
   }
 
-  // الرصيد النقدي
-  lines.push(`\n💵 *الرصيد النقدي*`);
-  lines.push(`  • مرحّل من السابق: ${fmt(data.carryForwardFromPrev)} د.إ`);
-  lines.push(`  • المرحّل لليوم التالي: *${fmt(data.carryForwardToNext)} د.إ*`);
+  // نسبة المطعم
+  lines.push(`\n💵 *نسبة المطعم: ${netRestaurant >= 0 ? "+" : ""}${fmt(netRestaurant)} د.إ*`);
+  lines.push(`  مرحّل من السابق: ${fmt(data.carryForwardFromPrev)}`);
 
-  lines.push(`${"─".repeat(28)}`);
-
-  if (data.notes) {
-    lines.push(`📝 ملاحظات: ${data.notes}`);
-  }
-
-  lines.push(`\n📎 _تفاصيل الفواتير مرفقة في ملف PDF_`);
+  lines.push(`\n${"─".repeat(30)}`);
+  if (data.notes) lines.push(`📝 ${data.notes}`);
+  lines.push(`📎 _تفاصيل الفواتير مرفقة_`);
 
   return lines.join("\n");
 }
@@ -214,10 +300,13 @@ export async function sendDailyAccountNotification(
     );
     const savedTemplate = (templateRows as any[])[0]?.full_text as string | undefined;
 
+    // جلب بيانات المخزون الحالي
+    const inv = await fetchInventorySnapshot(conn);
+
     // Build message: use saved template with variable substitution, or fallback to default
     const message = savedTemplate
       ? applyTemplate(savedTemplate, data)
-      : buildDefaultMessage(data);
+      : buildDefaultMessage(data, inv);
 
     const config = {
       apiUrl: settings.evolutionApiUrl as string,

@@ -5445,63 +5445,21 @@ export async function saveDailyAccount(data: {
     .where(eq(dailyAccounts.accountDate, data.accountDate))
     .limit(1);
 
-  // حساب نسبة الفود كوست في وقت الحفظ
+  // حساب نسبة الفود كوست — نفس دالة KPI بالظبط
   let foodCostPercent: number | null = null;
+  let currentInventoryForSave: number = 0;
   try {
-    const conn2 = await getRawConn();
-    try {
-      const accountDateStr = data.accountDate;
-      const [yr, mo] = accountDateStr.split('-').map(Number);
-      const monthStart = `${yr}-${String(mo).padStart(2,'0')}-01`;
-
-      // مخزون أول الشهر
-      const [settRows] = await conn2.execute(`SELECT openingStockValue FROM app_settings WHERE id=1`) as any[];
-      const openingStock = parseFloat(settRows[0]?.openingStockValue ?? 0) || 0;
-
-      // إجمالي المصروفات التشغيلية التراكمية من أول الشهر لحد اليوم
-      const [opExRows] = await conn2.execute(
-        `SELECT COALESCE(SUM(totalAmount),0) as total FROM invoices
-         WHERE expenseCategory='operational'
-           AND DATE(CONVERT_TZ(invoiceDate,'+00:00','+04:00')) >= ?
-           AND DATE(CONVERT_TZ(invoiceDate,'+00:00','+04:00')) <= ?`,
-        [monthStart, accountDateStr]
-      ) as any[];
-      const [freeRows2] = await conn2.execute(
-        `SELECT COALESCE(SUM(totalAmount),0) as total FROM free_invoices
-         WHERE expenseCategory='operational'
-           AND DATE(CONVERT_TZ(date,'+00:00','+04:00')) >= ?
-           AND DATE(CONVERT_TZ(date,'+00:00','+04:00')) <= ?`,
-        [monthStart, accountDateStr]
-      ) as any[];
-      const cumOpEx = (parseFloat(opExRows[0]?.total) || 0) + (parseFloat(freeRows2[0]?.total) || 0);
-
-      // المخزون الحالي
-      const invKpisNow = await getInventoryKpis();
-      const currentInventory = invKpisNow.totalInventoryValue;
-
-      // المبيعات التراكمية من أول الشهر لحد اليوم (شاملة اليوم الحالي)
-      const [salesRows] = await conn2.execute(
-        `SELECT COALESCE(SUM(salesCash+salesCard+salesKita+salesOrders+salesNoon+salesDeliveroo+salesCareem),0) as total
-         FROM daily_accounts
-         WHERE accountDate >= ? AND accountDate < ?`,
-        [monthStart, accountDateStr]
-      ) as any[];
-      const prevSales = parseFloat(salesRows[0]?.total) || 0;
-      const todaySales = data.salesCash + data.salesCard + data.salesKita + data.salesOrders + data.salesNoon + data.salesDeliveroo + data.salesCareem;
-      const cumSales = prevSales + todaySales;
-
-      if (cumSales > 0) {
-        const cogs = openingStock + cumOpEx - currentInventory;
-        foodCostPercent = cogs > 0 ? parseFloat(((cogs / cumSales) * 100).toFixed(2)) : 0;
-      }
-    } finally {
-      await conn2.end();
+    const [yr, mo] = data.accountDate.split('-').map(Number);
+    const kpi = await getFinancialKpi(yr, mo);
+    currentInventoryForSave = kpi.currentInventoryValue ?? 0;
+    if (kpi.netSales > 0 && kpi.cogsValue > 0) {
+      foodCostPercent = parseFloat(((kpi.cogsValue / kpi.netSales) * 100).toFixed(2));
     }
-  } catch (_) { /* لو فشل الحساب نحفظ null */ }
+  } catch (err: any) {
+    console.error('[foodCostPercent] calculation failed:', err?.message ?? err);
+  }
 
-  // قيمة المخزون الحالي للحفظ
-  const invKpisForStock = await getInventoryKpis();
-  const stockValueNow = invKpisForStock.totalInventoryValue;
+  const stockValueNow = currentInventoryForSave;
 
   const values = {
     salesCash: data.salesCash.toFixed(3),

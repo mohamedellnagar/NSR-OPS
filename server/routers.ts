@@ -4332,6 +4332,18 @@ ${statsContext}
           } finally { await conn2.end(); }
         };
         fetchPrevCarry().then((prevCarry) => {
+          // جلب staffMeals و foodCostPercent المحفوظين
+          const conn3 = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+          let staffMeals = 0, foodCostPercent = 0;
+          try {
+            const [daRows] = await conn3.execute(
+              `SELECT staffMeals, foodCostPercent FROM daily_accounts WHERE accountDate=? LIMIT 1`,
+              [input.accountDate]
+            ) as any[];
+            staffMeals = parseFloat((daRows as any[])[0]?.staffMeals ?? 0) || 0;
+            foodCostPercent = parseFloat((daRows as any[])[0]?.foodCostPercent ?? 0) || 0;
+          } finally { await conn3.end(); }
+
           console.log(`[DailyAccountNotif] Triggering notification for date: ${input.accountDate}`);
           return sendDailyAccountNotification({
             accountDate: input.accountDate,
@@ -4351,6 +4363,8 @@ ${statsContext}
             supplyExtra: input.supplyExtra,
             carryForwardFromPrev: prevCarry,
             carryForwardToNext: input.carryForwardToNext ?? 0,
+            staffMeals,
+            foodCostPercent,
             notes: input.notes,
             supplierInvoices: input.supplierInvoices,
             freeInvoices: input.freeInvoices,
