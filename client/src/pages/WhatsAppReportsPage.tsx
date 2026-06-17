@@ -14,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 type Recipient = { phoneNumber: string; name?: string };
 
 const REPORT_TYPES = [
+  { value: "daily_summary_confirmed", labelEn: "Daily Account Summary", labelAr: "ملخص الحساب اليومي" },
   { value: "daily_sales", labelEn: "Daily Sales", labelAr: "المبيعات اليومية" },
   { value: "orders_summary", labelEn: "Orders Summary", labelAr: "ملخص الطلبات" },
   { value: "kitchen_cost", labelEn: "Kitchen Cost", labelAr: "تكلفة المطبخ" },
