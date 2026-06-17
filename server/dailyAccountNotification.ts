@@ -80,15 +80,6 @@ async function fetchInventorySnapshot(conn: mysql.Connection): Promise<Inventory
   const [rows] = await conn.execute(
     `SELECT name, currentQuantity, lastPurchasePrice FROM raw_materials WHERE isActive=1`
   ) as any[];
-  const [butcherRows] = await conn.execute(
-    `SELECT COALESCE(SUM(currentStock * pricePerUnit),0) AS butcherValue FROM butcher_products WHERE isActive=1`
-  ) as any[];
-  const [mfgRows] = await conn.execute(
-    `SELECT COALESCE(SUM(t.closingBalance * COALESCE(t.actualUnitCost,0)),0) AS mfgValue
-     FROM kitchen_daily_production t
-     INNER JOIN (SELECT productName, MAX(productionDate) AS maxDate FROM kitchen_daily_production GROUP BY productName) latest
-     ON t.productName = latest.productName AND t.productionDate = latest.maxDate`
-  ) as any[];
 
   let rawTotal = 0;
   const snap: InventorySnapshot = { totalValue: 0, chicken1100: 0, chicken1200: 0, chicken1300: 0, chickenKilo: 0, beef: 0, indianMeat: 0, coal: 0, gas: 0, basmatiRice: 0, rice: 0, pasta: 0 };
@@ -111,9 +102,7 @@ async function fetchInventorySnapshot(conn: mysql.Connection): Promise<Inventory
     if ((name === "أرز" || name === "Rice") && !name.includes("بسمتي")) snap.rice    = qty;
     if (name === "مكرونة" || name === "Pasta" || name.includes("مكرونة") || name.includes("مكرونه")) snap.pasta = qty;
   }
-  const butcherVal = parseFloat((butcherRows as any[])[0]?.butcherValue) || 0;
-  const mfgVal = parseFloat((mfgRows as any[])[0]?.mfgValue) || 0;
-  snap.totalValue = rawTotal + butcherVal + mfgVal;
+  snap.totalValue = rawTotal;
   return snap;
 }
 
