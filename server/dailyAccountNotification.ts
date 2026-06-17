@@ -98,17 +98,18 @@ async function fetchInventorySnapshot(conn: mysql.Connection): Promise<Inventory
     const price = parseFloat(r.lastPurchasePrice ?? 0) || 0;
     if (qty > 0) rawTotal += qty * price;
     const name = (r.name ?? "").trim();
-    if (name === "دجاج 1100")    snap.chicken1100  = qty;
-    if (name === "دجاج 1200")    snap.chicken1200  = qty;
-    if (name === "دجاج 1300")    snap.chicken1300  = qty;
-    if (name === "دجاج كيلو")   snap.chickenKilo  = qty;
-    if (name === "Beef")          snap.beef         = qty;
-    if (name === "Indian Meat")   snap.indianMeat   = qty;
-    if (name === "Coal")          snap.coal         = qty;
-    if (name === "Gas")           snap.gas          = qty;
-    if (name === "Basmati Rice")  snap.basmatiRice  = qty;
-    if (name === "Rice")          snap.rice         = qty;
-    if (name === "Pasta")         snap.pasta        = qty;
+    if (name === "دجاج 1100")                                      snap.chicken1100 = qty;
+    if (name === "دجاج 1200")                                      snap.chicken1200 = qty;
+    if (name === "دجاج 1300")                                      snap.chicken1300 = qty;
+    if (name === "دجاج كيلو" || name.includes("دجاج كيلو"))       snap.chickenKilo = qty;
+    if (name === "لحم بقري" || name === "Beef")                    snap.beef        = qty;
+    if (name === "لحم هندي" || name === "Indian Meat")             snap.indianMeat  = qty;
+    if (name === "فحم" || name === "الفحم" || name === "Coal")     snap.coal        = qty;
+    if (name === "غاز" || name === "Gas" || name.includes("غاز"))  snap.gas         = qty;
+    if (name === "أرز بسمتي" || name === "Basmati Rice"
+        || name.includes("ارز بسمتي") || name.includes("أرز بسمتي")) snap.basmatiRice = qty;
+    if ((name === "أرز" || name === "Rice") && !name.includes("بسمتي")) snap.rice    = qty;
+    if (name === "مكرونة" || name === "Pasta" || name.includes("مكرونة") || name.includes("مكرونه")) snap.pasta = qty;
   }
   const butcherVal = parseFloat((butcherRows as any[])[0]?.butcherValue) || 0;
   const mfgVal = parseFloat((mfgRows as any[])[0]?.mfgValue) || 0;
