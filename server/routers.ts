@@ -4331,7 +4331,7 @@ ${statsContext}
             return Number((rows as any[])[0]?.carryForwardToNext || 0);
           } finally { await conn2.end(); }
         };
-        fetchPrevCarry().then((prevCarry) => {
+        fetchPrevCarry().then(async (prevCarry) => {
           // جلب staffMeals و foodCostPercent المحفوظين
           const conn3 = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
           let staffMeals = 0, foodCostPercent = 0;
