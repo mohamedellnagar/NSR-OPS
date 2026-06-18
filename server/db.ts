@@ -5451,12 +5451,19 @@ export async function saveDailyAccount(data: {
   try {
     const [yr, mo] = data.accountDate.split('-').map(Number);
     const kpi = await getFinancialKpi(yr, mo);
-    currentInventoryForSave = kpi.currentInventoryValue ?? 0;
     if (kpi.netSales > 0 && kpi.cogsValue > 0) {
       foodCostPercent = parseFloat(((kpi.cogsValue / kpi.netSales) * 100).toFixed(2));
     }
   } catch (err: any) {
     console.error('[foodCostPercent] calculation failed:', err?.message ?? err);
+  }
+
+  // قيمة المخزون = مواد خام + مصنّعة فقط (بدون الجزارة)
+  try {
+    const invKpis = await getInventoryKpis();
+    currentInventoryForSave = (invKpis.rawMaterialsTotalValue ?? 0) + (invKpis.semiFinishedTotalValue ?? 0);
+  } catch (err: any) {
+    console.error('[stockValue] calculation failed:', err?.message ?? err);
   }
 
   const stockValueNow = currentInventoryForSave;
