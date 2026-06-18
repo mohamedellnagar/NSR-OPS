@@ -6392,7 +6392,9 @@ export async function getFinancialKpi(year: number, month: number) {
     // تشغيلية مدفوعة — نفس طريقة جدول الحسابات اليومية (حسب تاريخ الدفع الفعلي)
     const monthExpensesData = await getMonthExpenses(year, month);
     const opPaid = Object.values(monthExpensesData).reduce((sum, d) => sum + d.operational + d.supplierTotal, 0);
-    const opDeferred = Math.max(0, totalOpEx - opPaid);
+    // مؤجل = الفعلي المتبقي من الفواتير المؤجلة (deferred فقط)
+    const opDeferred = parseFloat((opDeferredRows as any[])[0].opDeferred ?? '0') +
+                       parseFloat((opDeferredFreeRows as any[])[0].opDeferredFree ?? '0');
     const totalFixedEx = parseFloat(s.totalFixedEx ?? '0');
     const totalSupply = parseFloat(s.totalSupply ?? '0');
     const totalExpenses = totalOpEx + totalMainEx + totalFixedEx;
