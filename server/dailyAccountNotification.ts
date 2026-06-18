@@ -16,10 +16,10 @@ async function getConn() {
 }
 
 function fmt(n: number, dec = 2): string {
-  return Number(n || 0).toLocaleString("en-US", {
-    minimumFractionDigits: dec,
-    maximumFractionDigits: dec,
-  });
+  const num = Number(n || 0).toFixed(dec);
+  const [int, frac] = num.split(".");
+  const intFormatted = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return frac !== undefined ? `${intFormatted}.${frac}` : intFormatted;
 }
 
 function formatDateAr(dateStr: string): string {
