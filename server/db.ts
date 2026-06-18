@@ -6342,28 +6342,8 @@ export async function getFinancialKpi(year: number, month: number) {
     const snapshot = (snapshotRows as any[])[0] ?? null;
     const prevSnapshot = (prevSnapshotRows as any[])[0] ?? null;
 
-    // 4. قيمة المواد الخام الحالية
-    const [rawRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(currentQuantity * COALESCE(averageCost, lastPurchasePrice, 0)),0) AS rawValue
-       FROM raw_materials WHERE isActive=1`
-    );
-
-    // 5. قيمة منتجات الجزار الحالية
-    const [butcherRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(currentStock * pricePerUnit),0) AS butcherValue
-       FROM butcher_products WHERE isActive=1`
-    );
-
-    // 5b. قيمة المواد المصنعة (آخر رصيد لكل منتج من kitchen_daily_production)
-    const [manufacturedRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(t.closingBalance * COALESCE(t.actualUnitCost, 0)), 0) AS manufacturedValue
-       FROM kitchen_daily_production t
-       INNER JOIN (
-         SELECT productName, MAX(productionDate) AS maxDate
-         FROM kitchen_daily_production
-         GROUP BY productName
-       ) latest ON t.productName = latest.productName AND t.productionDate = latest.maxDate`
-    );
+    // 4. قيمة المخزون الحالية — نفس طريقة حساب صفحة المواد الخام
+    const liveInvKpisForFinancial = await getInventoryKpis();
 
     // 6. مخزون أول المدة من app_settings
     const [settingsRows] = await conn.query<any[]>(
@@ -6403,9 +6383,9 @@ export async function getFinancialKpi(year: number, month: number) {
     const totalDebt = snapshot ? parseFloat(snapshot.totalDebt) : liveTotalDebt;
 
     // إذا كان الشهر المختار مُقفلاً، استخدم القيم المجمّدة في الإقفال؛ وإلا استخدم القيم اللحظية
-    const liveRawMaterialsValue = parseFloat((rawRows as any[])[0].rawValue ?? '0');
-    const liveButcherValue = parseFloat((butcherRows as any[])[0].butcherValue ?? '0');
-    const liveManufacturedValue = parseFloat((manufacturedRows as any[])[0].manufacturedValue ?? '0');
+    const liveRawMaterialsValue = liveInvKpisForFinancial.rawMaterialsTotalValue;
+    const liveButcherValue = 0;
+    const liveManufacturedValue = liveInvKpisForFinancial.semiFinishedTotalValue;
     const liveCurrentInventoryValue = liveRawMaterialsValue + liveManufacturedValue;
 
     const isMonthClosed = !!snapshot;
