@@ -16,7 +16,7 @@ async function getConn() {
 }
 
 function fmt(n: number, dec = 2): string {
-  return Number(n || 0).toLocaleString("ar-AE", {
+  return Number(n || 0).toLocaleString("en-US", {
     minimumFractionDigits: dec,
     maximumFractionDigits: dec,
   });
@@ -170,27 +170,30 @@ function buildDefaultMessage(data: DailyAccountSummaryData, inv?: InventorySnaps
   const totalOpEx = data.expensesSupplierInvoices + data.expensesFreeInvoices + (data.expensesPartial ?? 0);
   const totalNonOpEx = data.expensesFixed;
   const totalExpenses = totalOpEx + totalNonOpEx;
-  const netRestaurant = data.carryForwardToNext;
 
+  const sep = "━━━━━━━━━━━━━━━━━━━━━━";
   const lines: string[] = [];
-  lines.push(`📊 *ملخص يوم ${formatDateAr(data.accountDate)}*`);
-  lines.push(`${"─".repeat(30)}`);
+
+  lines.push(`📊 *ملخص ${formatDateAr(data.accountDate)}*`);
+  lines.push(sep);
 
   // المبيعات
   lines.push(`\n💰 *إجمالي المبيعات: ${fmt(totalSales)} د.إ*`);
-  if (data.salesCash > 0)       lines.push(`  نقدي: ${fmt(data.salesCash)}`);
-  if (data.salesCard > 0)       lines.push(`  بطاقة: ${fmt(data.salesCard)}`);
-  if (data.salesKita > 0)       lines.push(`  كيتا: ${fmt(data.salesKita)}`);
-  if (data.salesOrders > 0)     lines.push(`  أوردرز: ${fmt(data.salesOrders)}`);
-  if (data.salesNoon > 0)       lines.push(`  نون: ${fmt(data.salesNoon)}`);
-  if (data.salesDeliveroo > 0)  lines.push(`  ديليفرو: ${fmt(data.salesDeliveroo)}`);
-  if (data.salesCareem > 0)     lines.push(`  كريم: ${fmt(data.salesCareem)}`);
+  const salesItems = [
+    { label: "نقدي",    val: data.salesCash },
+    { label: "بطاقة",   val: data.salesCard },
+    { label: "كيتا",    val: data.salesKita },
+    { label: "أوردرز",  val: data.salesOrders },
+    { label: "نون",     val: data.salesNoon },
+    { label: "ديليفرو", val: data.salesDeliveroo },
+    { label: "كريم",    val: data.salesCareem },
+  ].filter(x => x.val > 0);
+  lines.push(salesItems.map(x => `${x.label}: ${fmt(x.val)}`).join("  |  "));
 
   // المصروفات
-  lines.push(`\n🔴 *المصروفات*`);
-  if (totalOpEx > 0)   lines.push(`  تشغيلية: ${fmt(totalOpEx)} د.إ`);
-  if (totalNonOpEx > 0) lines.push(`  غير تشغيلية: ${fmt(totalNonOpEx)} د.إ`);
-  lines.push(`  *الإجمالي: ${fmt(totalExpenses)} د.إ*`);
+  lines.push(`\n💸 *المصروفات: ${fmt(totalExpenses)} د.إ*`);
+  if (totalOpEx > 0)    lines.push(`تشغيلية: ${fmt(totalOpEx)} د.إ`);
+  if (totalNonOpEx > 0) lines.push(`غير تشغيلية: ${fmt(totalNonOpEx)} د.إ`);
 
   // الفود كوست
   if ((data.foodCostPercent ?? 0) > 0) {
@@ -203,60 +206,48 @@ function buildDefaultMessage(data: DailyAccountSummaryData, inv?: InventorySnaps
   if (inv) {
     lines.push(`\n📦 *المخزون الحالي: ${fmt(inv.totalValue)} د.إ*`);
 
-    // الدجاج
     const chicken = [
-      { label: "دجاج 1100", qty: inv.chicken1100 },
-      { label: "دجاج 1200", qty: inv.chicken1200 },
-      { label: "دجاج 1300", qty: inv.chicken1300 },
-      { label: "دجاج كيلو", qty: inv.chickenKilo },
+      { label: "1100", qty: inv.chicken1100 },
+      { label: "1200", qty: inv.chicken1200 },
+      { label: "1300", qty: inv.chicken1300 },
+      { label: "كيلو", qty: inv.chickenKilo },
     ].filter(x => x.qty > 0);
-    if (chicken.length > 0) {
-      lines.push(`  🐔 دجاج:`);
-      for (const c of chicken) lines.push(`    • ${c.label}: ${c.qty} قطعة`);
-    }
+    if (chicken.length > 0)
+      lines.push(`🐔 دجاج: ${chicken.map(c => `${c.label}: ${c.qty} قطعة`).join("  |  ")}`);
 
-    // اللحوم
     const meats = [
-      { label: "لحم بقري",  qty: inv.beef,        unit: "kg" },
-      { label: "لحم هندي",  qty: inv.indianMeat,  unit: "kg" },
+      { label: "لحم بقري", qty: inv.beef },
+      { label: "لحم هندي", qty: inv.indianMeat },
     ].filter(x => x.qty > 0);
-    if (meats.length > 0) {
-      lines.push(`  🥩 لحوم:`);
-      for (const m of meats) lines.push(`    • ${m.label}: ${m.qty.toFixed(2)} ${m.unit}`);
-    }
+    if (meats.length > 0)
+      lines.push(`🥩 ${meats.map(m => `${m.label}: ${m.qty.toFixed(2)} kg`).join("  |  ")}`);
 
-    // أخرى
     const others = [
       { label: "فحم", qty: inv.coal, unit: "قطعة" },
       { label: "غاز", qty: inv.gas,  unit: "أسطوانة" },
     ].filter(x => x.qty > 0);
-    if (others.length > 0) {
-      lines.push(`  🔥 أخرى:`);
-      for (const o of others) lines.push(`    • ${o.label}: ${o.qty} ${o.unit}`);
-    }
+    if (others.length > 0)
+      lines.push(`🔥 ${others.map(o => `${o.label}: ${o.qty} ${o.unit}`).join("  |  ")}`);
 
-    // الحبوب
     const grains = [
-      { label: "أرز بسمتي", qty: inv.basmatiRice, unit: "kg" },
-      { label: "أرز",       qty: inv.rice,        unit: "kg" },
-      { label: "مكرونة",    qty: inv.pasta,       unit: "kg" },
+      { label: "أرز بسمتي", qty: inv.basmatiRice },
+      { label: "أرز",       qty: inv.rice },
+      { label: "مكرونة",    qty: inv.pasta },
     ].filter(x => x.qty > 0);
-    if (grains.length > 0) {
-      lines.push(`  🌾 حبوب:`);
-      for (const g of grains) lines.push(`    • ${g.label}: ${g.qty.toFixed(2)} ${g.unit}`);
-    }
+    if (grains.length > 0)
+      lines.push(`🌾 ${grains.map(g => `${g.label}: ${g.qty.toFixed(2)} kg`).join("  |  ")}`);
   }
 
   // نسبة المطعم
+  lines.push(`\n${sep}`);
   if (data.restaurantDiff != null) {
     const diff = data.restaurantDiff;
-    lines.push(`\n💵 *نسبة المطعم: ${diff >= 0 ? "+" : ""}${fmt(diff)} د.إ ${diff >= 0 ? "— للمطعم" : "— على المطعم"}*`);
-  } else {
-    lines.push(`\n💵 *الرصيد المرحّل: ${netRestaurant >= 0 ? "+" : ""}${fmt(netRestaurant)} د.إ*`);
+    const sign = diff >= 0 ? "+" : "";
+    const dir = diff >= 0 ? "للمطعم 🟢" : "على المطعم 🔴";
+    lines.push(`💵 *نسبة المطعم: ${sign}${fmt(diff)} د.إ — ${dir}*`);
   }
 
-  lines.push(`\n${"─".repeat(30)}`);
-  if (data.notes) lines.push(`📝 ${data.notes}`);
+  if (data.notes) lines.push(`\n📝 ${data.notes}`);
   lines.push(`📎 _تفاصيل الفواتير مرفقة_`);
 
   return lines.join("\n");
