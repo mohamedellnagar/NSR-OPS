@@ -548,9 +548,15 @@ export default function DailyAccountsPage() {
                       <span>مؤجل: {fmt((kpi as any)?.deferredDebt ?? 0)}</span>
                       <span>متبقي جزئي: {fmt((kpi as any)?.partialRemaining ?? 0)}</span>
                     </div>
-                    <div className="flex gap-3 opacity-70 border-t border-amber-200/50 pt-0.5 mt-0.5">
-                      <span>الشهر الحالي: {fmt((kpi as any)?.currentMonthDebt ?? 0)}</span>
-                      <span>شهور سابقة: {fmt((kpi as any)?.prevMonthsDebt ?? 0)}</span>
+                    <div className="flex flex-col gap-0.5 border-t border-amber-200/50 pt-0.5 mt-0.5 opacity-75">
+                      <div className="flex gap-3">
+                        <span className="font-medium">الشهر الحالي: {fmt((kpi as any)?.currentMonthDebt ?? 0)}</span>
+                        <span className="text-amber-500/60">مؤجل: {fmt((kpi as any)?.currentDeferred ?? 0)}  |  جزئي: {fmt((kpi as any)?.currentPartial ?? 0)}</span>
+                      </div>
+                      <div className="flex gap-3">
+                        <span className="font-medium">شهور سابقة: {fmt((kpi as any)?.prevMonthsDebt ?? 0)}</span>
+                        <span className="text-amber-500/60">مؤجل: {fmt((kpi as any)?.prevDeferred ?? 0)}  |  جزئي: {fmt((kpi as any)?.prevPartial ?? 0)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>

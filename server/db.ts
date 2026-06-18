@@ -6335,9 +6335,13 @@ export async function getFinancialKpi(year: number, month: number) {
         COALESCE(SUM(CASE WHEN paymentStatus='deferred' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS deferredDebt,
         COALESCE(SUM(CASE WHEN paymentStatus='partial' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS partialRemaining,
         COALESCE(SUM(CASE WHEN YEAR(invoiceDate)=? AND MONTH(invoiceDate)=? THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS currentMonthDebt,
-        COALESCE(SUM(CASE WHEN NOT(YEAR(invoiceDate)=? AND MONTH(invoiceDate)=?) THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS prevMonthsDebt
+        COALESCE(SUM(CASE WHEN NOT(YEAR(invoiceDate)=? AND MONTH(invoiceDate)=?) THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS prevMonthsDebt,
+        COALESCE(SUM(CASE WHEN YEAR(invoiceDate)=? AND MONTH(invoiceDate)=? AND paymentStatus='deferred' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS currentDeferred,
+        COALESCE(SUM(CASE WHEN YEAR(invoiceDate)=? AND MONTH(invoiceDate)=? AND paymentStatus='partial' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS currentPartial,
+        COALESCE(SUM(CASE WHEN NOT(YEAR(invoiceDate)=? AND MONTH(invoiceDate)=?) AND paymentStatus='deferred' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS prevDeferred,
+        COALESCE(SUM(CASE WHEN NOT(YEAR(invoiceDate)=? AND MONTH(invoiceDate)=?) AND paymentStatus='partial' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS prevPartial
        FROM invoices WHERE paymentStatus NOT IN ('paid','cancelled')`,
-      [year, month, year, month]
+      [year, month, year, month, year, month, year, month, year, month, year, month]
     );
     const [opDebtFreeRows] = await conn.query<any[]>(
       `SELECT
@@ -6346,9 +6350,13 @@ export async function getFinancialKpi(year: number, month: number) {
         COALESCE(SUM(CASE WHEN paymentStatus='deferred' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS deferredDebt,
         COALESCE(SUM(CASE WHEN paymentStatus='partial' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS partialRemaining,
         COALESCE(SUM(CASE WHEN YEAR(date)=? AND MONTH(date)=? THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS currentMonthDebt,
-        COALESCE(SUM(CASE WHEN NOT(YEAR(date)=? AND MONTH(date)=?) THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS prevMonthsDebt
+        COALESCE(SUM(CASE WHEN NOT(YEAR(date)=? AND MONTH(date)=?) THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS prevMonthsDebt,
+        COALESCE(SUM(CASE WHEN YEAR(date)=? AND MONTH(date)=? AND paymentStatus='deferred' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS currentDeferred,
+        COALESCE(SUM(CASE WHEN YEAR(date)=? AND MONTH(date)=? AND paymentStatus='partial' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS currentPartial,
+        COALESCE(SUM(CASE WHEN NOT(YEAR(date)=? AND MONTH(date)=?) AND paymentStatus='deferred' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS prevDeferred,
+        COALESCE(SUM(CASE WHEN NOT(YEAR(date)=? AND MONTH(date)=?) AND paymentStatus='partial' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS prevPartial
        FROM free_invoices WHERE paymentStatus NOT IN ('paid','cancelled')`,
-      [year, month, year, month]
+      [year, month, year, month, year, month, year, month, year, month, year, month]
     );
 
     // 3. إقفالات المخزون الشهرية: إقفال الشهر المختار (مخزون آخر المدة) وإقفال الشهر السابق (مخزون أول المدة)
@@ -6475,6 +6483,10 @@ export async function getFinancialKpi(year: number, month: number) {
       partialRemaining: parseFloat((opDebtRows as any[])[0].partialRemaining ?? '0') + parseFloat((opDebtFreeRows as any[])[0].partialRemaining ?? '0'),
       currentMonthDebt: parseFloat((opDebtRows as any[])[0].currentMonthDebt ?? '0') + parseFloat((opDebtFreeRows as any[])[0].currentMonthDebt ?? '0'),
       prevMonthsDebt: parseFloat((opDebtRows as any[])[0].prevMonthsDebt ?? '0') + parseFloat((opDebtFreeRows as any[])[0].prevMonthsDebt ?? '0'),
+      currentDeferred: parseFloat((opDebtRows as any[])[0].currentDeferred ?? '0') + parseFloat((opDebtFreeRows as any[])[0].currentDeferred ?? '0'),
+      currentPartial: parseFloat((opDebtRows as any[])[0].currentPartial ?? '0') + parseFloat((opDebtFreeRows as any[])[0].currentPartial ?? '0'),
+      prevDeferred: parseFloat((opDebtRows as any[])[0].prevDeferred ?? '0') + parseFloat((opDebtFreeRows as any[])[0].prevDeferred ?? '0'),
+      prevPartial: parseFloat((opDebtRows as any[])[0].prevPartial ?? '0') + parseFloat((opDebtFreeRows as any[])[0].prevPartial ?? '0'),
       rawMaterialsValue,
       butcherValue,
       manufacturedValue,
