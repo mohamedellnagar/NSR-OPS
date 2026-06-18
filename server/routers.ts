@@ -4456,10 +4456,29 @@ ${statsContext}
       .input(z.object({ year: z.number(), month: z.number().min(1).max(12) }))
       .query(({ input }) => getFinancialKpi(input.year, input.month)),
 
+    getOpeningStock: protectedProcedure.query(async () => {
+      const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+      try {
+        const [rows] = await conn.query<any[]>(`SELECT openingStockValue, openingStockDate FROM app_settings WHERE id=1`);
+        const r = (rows as any[])[0];
+        const rawDate = r?.openingStockDate;
+        let dateStr: string | null = null;
+        if (rawDate instanceof Date) {
+          const y = rawDate.getFullYear();
+          const m = String(rawDate.getMonth() + 1).padStart(2, '0');
+          const d = String(rawDate.getDate()).padStart(2, '0');
+          dateStr = `${y}-${m}-${d}`;
+        } else if (rawDate) {
+          dateStr = String(rawDate).split('T')[0];
+        }
+        return { openingStockValue: parseFloat(r?.openingStockValue ?? '0'), openingStockDate: dateStr };
+      } finally { await conn.end(); }
+    }),
+
     updateOpeningStock: warehouseProcedure
       .input(z.object({
         openingStockValue: z.number().min(0),
-        openingStockDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        openingStockDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "التاريخ يجب أن يكون بصيغة YYYY-MM-DD" }),
       }))
       .mutation(({ input }) => updateOpeningStock(input.openingStockValue, input.openingStockDate)),
 

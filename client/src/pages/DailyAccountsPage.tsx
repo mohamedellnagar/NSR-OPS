@@ -276,13 +276,16 @@ export default function DailyAccountsPage() {
     { refetchOnWindowFocus: false }
   );
   const { data: liveInvKpis } = trpc.materials.kpis.useQuery(undefined, { refetchOnWindowFocus: false });
+  // قيمة مخزون أول المدة دايماً من app_settings مباشرة (مش متأثرة بالشهر المعروض)
+  const { data: openingStockSettings, refetch: refetchOpeningStock } = trpc.dailyAccounts.getOpeningStock.useQuery(undefined, { refetchOnWindowFocus: false });
   const updateOpeningStockMut = trpc.dailyAccounts.updateOpeningStock.useMutation({
     onSuccess: () => {
       toast.success("تم تحديث مخزون أول المدة");
       utils.dailyAccounts.financialKpi.invalidate();
+      refetchOpeningStock();
       setEditingOpeningStock(false);
     },
-    onError: (e) => toast.error(e.message),
+    onError: (e) => toast.error(e.message || "فشل حفظ مخزون أول المدة"),
   });
   const closeMonthMut = trpc.dailyAccounts.closeMonth.useMutation({
     onSuccess: () => {
@@ -422,12 +425,21 @@ export default function DailyAccountsPage() {
                     <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">مخزون أول المدة</span>
                   </div>
                   {!editingOpeningStock ? (
-                    <button onClick={() => { setOpeningStockInput(String(kpi?.openingStockValue ?? 10800)); setOpeningStockDateInput(kpi?.openingStockDate ?? '2026-04-01'); setEditingOpeningStock(true); }} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                    <button onClick={() => {
+                      setOpeningStockInput(String(openingStockSettings?.openingStockValue ?? kpi?.openingStockValue ?? 0));
+                      setOpeningStockDateInput(openingStockSettings?.openingStockDate ?? '');
+                      setEditingOpeningStock(true);
+                    }} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                       <Pencil className="w-3 h-3 text-slate-400" />
                     </button>
                   ) : (
                     <div className="flex gap-1">
-                      <button onClick={() => updateOpeningStockMut.mutate({ openingStockValue: parseFloat(openingStockInput) || 0, openingStockDate: openingStockDateInput })} className="p-1 rounded hover:bg-emerald-100 text-emerald-600">
+                      <button onClick={() => {
+                        const val = parseFloat(openingStockInput);
+                        if (isNaN(val) || val < 0) { toast.error("أدخل قيمة صحيحة للمخزون"); return; }
+                        if (!/^\d{4}-\d{2}-\d{2}$/.test(openingStockDateInput)) { toast.error("اختر تاريخاً صحيحاً"); return; }
+                        updateOpeningStockMut.mutate({ openingStockValue: val, openingStockDate: openingStockDateInput });
+                      }} className="p-1 rounded hover:bg-emerald-100 text-emerald-600">
                         <Check className="w-3 h-3" />
                       </button>
                       <button onClick={() => setEditingOpeningStock(false)} className="p-1 rounded hover:bg-red-100 text-red-500">
@@ -443,8 +455,8 @@ export default function DailyAccountsPage() {
                   </div>
                 ) : (
                   <>
-                    <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{fmt(kpi?.openingStockValue ?? 0)} <span className="text-xs font-normal">د.إ</span></p>
-                    {kpi?.openingStockDate && <p className="text-[10px] text-slate-400 mt-0.5">بتاريخ {kpi.openingStockDate}</p>}
+                    <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{fmt(openingStockSettings?.openingStockValue ?? kpi?.openingStockValue ?? 0)} <span className="text-xs font-normal">د.إ</span></p>
+                    {openingStockSettings?.openingStockDate && <p className="text-[10px] text-slate-400 mt-0.5">بتاريخ {openingStockSettings.openingStockDate}</p>}
                   </>
                 )}
               </div>
