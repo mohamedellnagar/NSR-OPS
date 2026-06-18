@@ -6469,13 +6469,17 @@ export async function getFinancialKpi(year: number, month: number) {
     const currentInventoryValue = liveCurrentInventoryValue;
 
     const settings = (settingsRows as any[])[0];
-    // مخزون أول المدة: خام + مصنّع فقط من إقفال الشهر السابق (بدون جزار)
-    const openingStockValue = prevSnapshot
+    // مخزون أول المدة: خام + مصنّع من الإقفال السابق بشرط أن يكون الإقفال به قيمة مخزون فعلية
+    // لو الإقفال بقيمة صفر (إقفال مديونية فقط) نرجع لقيمة الإعدادات
+    const prevSnapInv = prevSnapshot
       ? parseFloat(prevSnapshot.rawMaterialsValue) + parseFloat(prevSnapshot.manufacturedValue)
+      : 0;
+    const openingStockValue = prevSnapInv > 0
+      ? prevSnapInv
       : parseFloat(settings?.openingStockValue ?? '0');
     // تحويل Date object إلى string بصيغة YYYY-MM-DD لتجنب خطأ React
     const rawDate = settings?.openingStockDate;
-    const openingStockDate: string | null = prevSnapshot
+    const openingStockDate: string | null = (prevSnapshot && prevSnapInv > 0)
       ? null
       : (rawDate
           ? (rawDate instanceof Date
