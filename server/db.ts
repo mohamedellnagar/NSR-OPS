@@ -6360,7 +6360,10 @@ export async function getFinancialKpi(year: number, month: number) {
 
     // 3. إقفالات المخزون الشهرية: إقفال الشهر المختار (مخزون آخر المدة) وإقفال الشهر السابق (مخزون أول المدة)
     const [snapshotRows] = await conn.query<any[]>(
-      `SELECT year, month, rawMaterialsValue, butcherValue, manufacturedValue, totalValue, snapshotDate, supplierDebt, freeDebt, totalDebt
+      `SELECT year, month, rawMaterialsValue, butcherValue, manufacturedValue, totalValue, snapshotDate,
+              supplierDebt, freeDebt, totalDebt,
+              totalSales, totalOpEx, totalMainEx, totalFixedEx,
+              opPaid, opDeferred, cogsValue, grossProfit, netProfit, openingStockValue
        FROM monthly_stock_snapshots WHERE year=? AND month=?`,
       [year, month]
     );
@@ -6421,12 +6424,48 @@ export async function getFinancialKpi(year: number, month: number) {
     const liveCurrentInventoryValue = liveRawMaterialsValue + liveManufacturedValue;
 
     const isMonthClosed = !!snapshot;
-    const rawMaterialsValue = snapshot ? parseFloat(snapshot.rawMaterialsValue) : liveRawMaterialsValue;
-    const butcherValue = snapshot ? parseFloat(snapshot.butcherValue) : liveButcherValue;
-    const manufacturedValue = snapshot ? parseFloat(snapshot.manufacturedValue) : liveManufacturedValue;
-    const currentInventoryValue = snapshot
-      ? parseFloat(snapshot.rawMaterialsValue) + parseFloat(snapshot.manufacturedValue)
-      : liveCurrentInventoryValue;
+
+    // لو الشهر مقفول وعنده KPI محفوظة — ارجع القيم المجمّدة مباشرة
+    if (isMonthClosed && snapshot.totalSales != null) {
+      const frozenTotalSales    = parseFloat(snapshot.totalSales ?? '0');
+      const frozenTotalOpEx     = parseFloat(snapshot.totalOpEx ?? '0');
+      const frozenTotalMainEx   = parseFloat(snapshot.totalMainEx ?? '0');
+      const frozenTotalFixedEx  = parseFloat(snapshot.totalFixedEx ?? '0');
+      const frozenOpPaid        = parseFloat(snapshot.opPaid ?? '0');
+      const frozenOpDeferred    = parseFloat(snapshot.opDeferred ?? '0');
+      const frozenCogsValue     = parseFloat(snapshot.cogsValue ?? '0');
+      const frozenGrossProfit   = parseFloat(snapshot.grossProfit ?? '0');
+      const frozenNetProfit     = parseFloat(snapshot.netProfit ?? '0');
+      const frozenOpeningStock  = parseFloat(snapshot.openingStockValue ?? '0');
+      const frozenCurrentInv    = parseFloat(snapshot.rawMaterialsValue) + parseFloat(snapshot.manufacturedValue);
+      const frozenTotalExpenses = frozenTotalOpEx + frozenTotalMainEx + frozenTotalFixedEx;
+      const frozenGrossMargin   = frozenTotalSales > 0 ? (frozenGrossProfit / frozenTotalSales) * 100 : 0;
+      const frozenProfitBeforeFixed = frozenGrossProfit - frozenTotalOpEx - frozenTotalMainEx;
+      const frozenProfitMargin  = frozenTotalSales > 0 ? (frozenNetProfit / frozenTotalSales) * 100 : 0;
+      return {
+        totalSales: frozenTotalSales, netSales: frozenTotalSales,
+        totalOpEx: frozenTotalOpEx, opPaid: frozenOpPaid, opDeferred: frozenOpDeferred,
+        totalMainEx: frozenTotalMainEx, totalFixedEx: frozenTotalFixedEx,
+        totalExpenses: frozenTotalExpenses, totalSupply: parseFloat(s.totalSupply ?? '0'),
+        totalPurchases: parseFloat((purchasesRows as any[])[0].totalPurchases ?? '0'),
+        cogsValue: frozenCogsValue, grossProfit: frozenGrossProfit, grossMargin: frozenGrossMargin,
+        profitBeforeFixed: frozenProfitBeforeFixed,
+        profitBeforeFixedMargin: frozenTotalSales > 0 ? (frozenProfitBeforeFixed / frozenTotalSales) * 100 : 0,
+        netProfit: frozenNetProfit, profitMargin: frozenProfitMargin,
+        supplierDebt: parseFloat(snapshot.supplierDebt), freeDebt: parseFloat(snapshot.freeDebt), totalDebt: parseFloat(snapshot.totalDebt),
+        opDebt: 0, nonOpDebt: 0, deferredDebt: frozenOpDeferred, partialRemaining: 0,
+        currentMonthDebt: 0, prevMonthsDebt: 0, currentDeferred: 0, currentPartial: 0, prevDeferred: 0, prevPartial: 0,
+        rawMaterialsValue: parseFloat(snapshot.rawMaterialsValue), butcherValue: parseFloat(snapshot.butcherValue),
+        manufacturedValue: parseFloat(snapshot.manufacturedValue), currentInventoryValue: frozenCurrentInv,
+        openingStockValue: frozenOpeningStock, openingStockDate: null,
+        isMonthClosed: true, monthClosedDate: snapshot.snapshotDate,
+      };
+    }
+
+    const rawMaterialsValue = liveRawMaterialsValue;
+    const butcherValue = liveButcherValue;
+    const manufacturedValue = liveManufacturedValue;
+    const currentInventoryValue = liveCurrentInventoryValue;
 
     const settings = (settingsRows as any[])[0];
     // مخزون أول المدة: إقفال الشهر السابق إن وُجد، وإلا القيمة العامة من الإعدادات
@@ -6518,49 +6557,44 @@ export async function closeMonth(year: number, month: number, createdBy: number 
       throw new Error("هذا الشهر مُقفل بالفعل");
     }
 
-    const [rawRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(currentQuantity * COALESCE(averageCost, lastPurchasePrice, 0)),0) AS rawValue
-       FROM raw_materials WHERE isActive=1`
-    );
-    const [butcherRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(currentStock * pricePerUnit),0) AS butcherValue
-       FROM butcher_products WHERE isActive=1`
-    );
-    const [manufacturedRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(t.closingBalance * COALESCE(t.actualUnitCost, 0)), 0) AS manufacturedValue
-       FROM kitchen_daily_production t
-       INNER JOIN (
-         SELECT productName, MAX(productionDate) AS maxDate
-         FROM kitchen_daily_production
-         GROUP BY productName
-       ) latest ON t.productName = latest.productName AND t.productionDate = latest.maxDate`
-    );
-    const [debtRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(totalAmount - COALESCE(paidAmount,0)),0) AS debt
-       FROM invoices WHERE paymentStatus NOT IN ('paid','cancelled')`
-    );
-    const [freeDebtRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(totalAmount - COALESCE(paidAmount,0)),0) AS debt
-       FROM free_invoices WHERE paymentStatus NOT IN ('paid','cancelled')`
-    );
+    // جلب كامل الـ KPI للشهر وتجميده
+    const kpi = await getFinancialKpi(year, month);
 
-    const rawMaterialsValue = parseFloat((rawRows as any[])[0].rawValue ?? '0');
+    // قيمة المخزون الحالي (خام + مصنّعة فقط)
+    const invKpis = await getInventoryKpis();
+    const rawMaterialsValue = invKpis.rawMaterialsTotalValue;
+    const semiFinishedValue = invKpis.semiFinishedTotalValue;
+
+    // قيمة الجزار
+    const [butcherRows] = await conn.query<any[]>(
+      `SELECT COALESCE(SUM(currentStock * pricePerUnit),0) AS butcherValue FROM butcher_products WHERE isActive=1`
+    );
     const butcherValue = parseFloat((butcherRows as any[])[0].butcherValue ?? '0');
-    const manufacturedValue = parseFloat((manufacturedRows as any[])[0].manufacturedValue ?? '0');
-    const totalValue = rawMaterialsValue + butcherValue + manufacturedValue;
-    const supplierDebt = parseFloat((debtRows as any[])[0].debt ?? '0');
-    const freeDebt = parseFloat((freeDebtRows as any[])[0].debt ?? '0');
-    const totalDebt = supplierDebt + freeDebt;
+    const totalValue = rawMaterialsValue + butcherValue + semiFinishedValue;
+
+    const supplierDebt = kpi.supplierDebt;
+    const freeDebt = kpi.freeDebt;
+    const totalDebt = kpi.totalDebt;
     const snapshotDate = new Date().toISOString().split('T')[0];
 
     await conn.execute(
       `INSERT INTO monthly_stock_snapshots
-        (year, month, rawMaterialsValue, butcherValue, manufacturedValue, totalValue, supplierDebt, freeDebt, totalDebt, snapshotDate, createdBy)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [year, month, rawMaterialsValue, butcherValue, manufacturedValue, totalValue, supplierDebt, freeDebt, totalDebt, snapshotDate, createdBy]
+        (year, month, rawMaterialsValue, butcherValue, manufacturedValue, totalValue,
+         supplierDebt, freeDebt, totalDebt,
+         totalSales, totalOpEx, totalMainEx, totalFixedEx,
+         opPaid, opDeferred, cogsValue, grossProfit, netProfit, openingStockValue,
+         snapshotDate, createdBy)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        year, month, rawMaterialsValue, butcherValue, semiFinishedValue, totalValue,
+        supplierDebt, freeDebt, totalDebt,
+        kpi.totalSales, kpi.totalOpEx ?? 0, kpi.totalMainEx ?? 0, kpi.totalFixedEx ?? 0,
+        kpi.opPaid, kpi.opDeferred, kpi.cogsValue, kpi.grossProfit, kpi.netProfit, kpi.openingStockValue,
+        snapshotDate, createdBy
+      ]
     );
 
-    return { success: true, rawMaterialsValue, butcherValue, manufacturedValue, totalValue, supplierDebt, freeDebt, totalDebt, snapshotDate };
+    return { success: true, rawMaterialsValue, butcherValue, manufacturedValue: semiFinishedValue, totalValue, supplierDebt, freeDebt, totalDebt, snapshotDate };
   } finally {
     await conn.end();
   }
