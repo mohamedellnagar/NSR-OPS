@@ -6425,8 +6425,8 @@ export async function getFinancialKpi(year: number, month: number) {
 
     const isMonthClosed = !!snapshot;
 
-    // لو الشهر مقفول وعنده KPI محفوظة — ارجع القيم المجمّدة مباشرة
-    if (isMonthClosed && snapshot.totalSales != null) {
+    // لو الشهر مقفول — ارجع القيم المجمّدة مباشرة (المديونية = 0 لأنها انتقلت للشهر الجاي)
+    if (isMonthClosed) {
       const frozenTotalSales    = parseFloat(snapshot.totalSales ?? '0');
       const frozenTotalOpEx     = parseFloat(snapshot.totalOpEx ?? '0');
       const frozenTotalMainEx   = parseFloat(snapshot.totalMainEx ?? '0');
@@ -6452,9 +6452,10 @@ export async function getFinancialKpi(year: number, month: number) {
         profitBeforeFixed: frozenProfitBeforeFixed,
         profitBeforeFixedMargin: frozenTotalSales > 0 ? (frozenProfitBeforeFixed / frozenTotalSales) * 100 : 0,
         netProfit: frozenNetProfit, profitMargin: frozenProfitMargin,
-        supplierDebt: parseFloat(snapshot.supplierDebt), freeDebt: parseFloat(snapshot.freeDebt), totalDebt: parseFloat(snapshot.totalDebt),
-        opDebt: parseFloat(snapshot.totalDebt), nonOpDebt: 0, deferredDebt: frozenOpDeferred, partialRemaining: 0,
-        currentMonthDebt: parseFloat(snapshot.totalDebt), prevMonthsDebt: 0, currentDeferred: frozenOpDeferred, currentPartial: 0, prevDeferred: 0, prevPartial: 0,
+        // المديونية = 0 للشهور المقفولة (انتقلت للشهر الجاي)
+        supplierDebt: 0, freeDebt: 0, totalDebt: 0,
+        opDebt: 0, nonOpDebt: 0, deferredDebt: 0, partialRemaining: 0,
+        currentMonthDebt: 0, prevMonthsDebt: 0, currentDeferred: 0, currentPartial: 0, prevDeferred: 0, prevPartial: 0,
         rawMaterialsValue: parseFloat(snapshot.rawMaterialsValue), butcherValue: parseFloat(snapshot.butcherValue),
         manufacturedValue: parseFloat(snapshot.manufacturedValue), currentInventoryValue: frozenCurrentInv,
         openingStockValue: frozenOpeningStock, openingStockDate: null,
