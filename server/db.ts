@@ -6477,15 +6477,22 @@ export async function getFinancialKpi(year: number, month: number) {
     const openingStockValue = prevSnapInv > 0
       ? prevSnapInv
       : parseFloat(settings?.openingStockValue ?? '0');
-    // تحويل Date object إلى string بصيغة YYYY-MM-DD لتجنب خطأ React
+    // تحويل Date object إلى string بصيغة YYYY-MM-DD
+    // نستخدم getFullYear/getMonth/getDate لتجنب مشكلة فرق التوقيت مع toISOString
     const rawDate = settings?.openingStockDate;
+    function toLocalDateStr(d: unknown): string | null {
+      if (!d) return null;
+      if (d instanceof Date) {
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      }
+      return String(d).split('T')[0];
+    }
     const openingStockDate: string | null = (prevSnapshot && prevSnapInv > 0)
       ? null
-      : (rawDate
-          ? (rawDate instanceof Date
-              ? rawDate.toISOString().split('T')[0]
-              : String(rawDate).split('T')[0])
-          : null);
+      : toLocalDateStr(rawDate);
 
     // تكلفة البضاعة المستخدمة = مخزون أول + التشغيلية فقط - مخزون آخر
     const cogsPurchases = totalOpEx;
