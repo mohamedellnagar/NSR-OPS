@@ -6370,7 +6370,7 @@ export async function getFinancialKpi(year: number, month: number) {
     const prevMonth = month === 1 ? 12 : month - 1;
     const prevYear = month === 1 ? year - 1 : year;
     const [prevSnapshotRows] = await conn.query<any[]>(
-      `SELECT totalValue FROM monthly_stock_snapshots WHERE year=? AND month=?`,
+      `SELECT totalValue, rawMaterialsValue, manufacturedValue FROM monthly_stock_snapshots WHERE year=? AND month=?`,
       [prevYear, prevMonth]
     );
     const snapshot = (snapshotRows as any[])[0] ?? null;
@@ -6453,8 +6453,8 @@ export async function getFinancialKpi(year: number, month: number) {
         profitBeforeFixedMargin: frozenTotalSales > 0 ? (frozenProfitBeforeFixed / frozenTotalSales) * 100 : 0,
         netProfit: frozenNetProfit, profitMargin: frozenProfitMargin,
         supplierDebt: parseFloat(snapshot.supplierDebt), freeDebt: parseFloat(snapshot.freeDebt), totalDebt: parseFloat(snapshot.totalDebt),
-        opDebt: 0, nonOpDebt: 0, deferredDebt: frozenOpDeferred, partialRemaining: 0,
-        currentMonthDebt: 0, prevMonthsDebt: 0, currentDeferred: 0, currentPartial: 0, prevDeferred: 0, prevPartial: 0,
+        opDebt: parseFloat(snapshot.totalDebt), nonOpDebt: 0, deferredDebt: frozenOpDeferred, partialRemaining: 0,
+        currentMonthDebt: parseFloat(snapshot.totalDebt), prevMonthsDebt: 0, currentDeferred: frozenOpDeferred, currentPartial: 0, prevDeferred: 0, prevPartial: 0,
         rawMaterialsValue: parseFloat(snapshot.rawMaterialsValue), butcherValue: parseFloat(snapshot.butcherValue),
         manufacturedValue: parseFloat(snapshot.manufacturedValue), currentInventoryValue: frozenCurrentInv,
         openingStockValue: frozenOpeningStock, openingStockDate: null,
@@ -6468,9 +6468,9 @@ export async function getFinancialKpi(year: number, month: number) {
     const currentInventoryValue = liveCurrentInventoryValue;
 
     const settings = (settingsRows as any[])[0];
-    // مخزون أول المدة: إقفال الشهر السابق إن وُجد، وإلا القيمة العامة من الإعدادات
+    // مخزون أول المدة: خام + مصنّع فقط من إقفال الشهر السابق (بدون جزار)
     const openingStockValue = prevSnapshot
-      ? parseFloat(prevSnapshot.totalValue)
+      ? parseFloat(prevSnapshot.rawMaterialsValue) + parseFloat(prevSnapshot.manufacturedValue)
       : parseFloat(settings?.openingStockValue ?? '0');
     // تحويل Date object إلى string بصيغة YYYY-MM-DD لتجنب خطأ React
     const rawDate = settings?.openingStockDate;
