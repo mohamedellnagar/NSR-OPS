@@ -540,8 +540,8 @@ export default function DailyAccountsPage() {
                   </div>
                   <p className="text-lg font-bold text-amber-700 dark:text-amber-200">{fmt(kpi?.totalDebt ?? 0)} <span className="text-xs font-normal">د.إ</span></p>
                   <div className="flex gap-3 mt-0.5 text-[10px] text-amber-600/70 dark:text-amber-400/60">
-                    <span>موردين: {fmt(kpi?.supplierDebt ?? 0)}</span>
-                    <span>حرة: {fmt(kpi?.freeDebt ?? 0)}</span>
+                    <span>تشغيلية: {fmt((kpi as any)?.opDebt ?? 0)}</span>
+                    <span>غير تشغيلية: {fmt((kpi as any)?.nonOpDebt ?? 0)}</span>
                   </div>
                 </div>
 

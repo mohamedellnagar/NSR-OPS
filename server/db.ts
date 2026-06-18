@@ -6327,6 +6327,19 @@ export async function getFinancialKpi(year: number, month: number) {
       `SELECT COALESCE(SUM(totalAmount - COALESCE(paidAmount,0)),0) AS debt
        FROM free_invoices WHERE paymentStatus NOT IN ('paid','cancelled')`
     );
+    // المديونية التشغيلية والغير تشغيلية
+    const [opDebtRows] = await conn.query<any[]>(
+      `SELECT
+        COALESCE(SUM(CASE WHEN expenseCategory='operational' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS opDebt,
+        COALESCE(SUM(CASE WHEN expenseCategory!='operational' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS nonOpDebt
+       FROM invoices WHERE paymentStatus NOT IN ('paid','cancelled')`
+    );
+    const [opDebtFreeRows] = await conn.query<any[]>(
+      `SELECT
+        COALESCE(SUM(CASE WHEN expenseCategory='operational' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS opDebt,
+        COALESCE(SUM(CASE WHEN expenseCategory!='operational' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS nonOpDebt
+       FROM free_invoices WHERE paymentStatus NOT IN ('paid','cancelled')`
+    );
 
     // 3. إقفالات المخزون الشهرية: إقفال الشهر المختار (مخزون آخر المدة) وإقفال الشهر السابق (مخزون أول المدة)
     const [snapshotRows] = await conn.query<any[]>(
@@ -6446,6 +6459,8 @@ export async function getFinancialKpi(year: number, month: number) {
       supplierDebt,
       freeDebt,
       totalDebt,
+      opDebt: parseFloat((opDebtRows as any[])[0].opDebt ?? '0') + parseFloat((opDebtFreeRows as any[])[0].opDebt ?? '0'),
+      nonOpDebt: parseFloat((opDebtRows as any[])[0].nonOpDebt ?? '0') + parseFloat((opDebtFreeRows as any[])[0].nonOpDebt ?? '0'),
       rawMaterialsValue,
       butcherValue,
       manufacturedValue,
