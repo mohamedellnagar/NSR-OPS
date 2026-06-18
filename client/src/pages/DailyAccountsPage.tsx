@@ -275,6 +275,7 @@ export default function DailyAccountsPage() {
     { year: selectedYear, month: selectedMonth },
     { refetchOnWindowFocus: false }
   );
+  const { data: liveInvKpis } = trpc.materials.kpis.useQuery(undefined, { refetchOnWindowFocus: false });
   const updateOpeningStockMut = trpc.dailyAccounts.updateOpeningStock.useMutation({
     onSuccess: () => {
       toast.success("تم تحديث مخزون أول المدة");
@@ -552,10 +553,10 @@ export default function DailyAccountsPage() {
                     </div>
                     <span className="text-xs font-semibold text-teal-700 dark:text-teal-300">قيمة المخزون الحالي</span>
                   </div>
-                  <p className="text-lg font-bold text-teal-700 dark:text-teal-200">{fmt((kpi?.rawMaterialsValue ?? 0) + (kpi?.manufacturedValue ?? 0))} <span className="text-xs font-normal">د.إ</span></p>
+                  <p className="text-lg font-bold text-teal-700 dark:text-teal-200">{fmt((liveInvKpis?.rawMaterialsTotalValue ?? 0) + (liveInvKpis?.semiFinishedTotalValue ?? 0))} <span className="text-xs font-normal">د.إ</span></p>
                   <div className="flex gap-3 mt-0.5 text-[10px] text-teal-600/70 dark:text-teal-400/60 flex-wrap">
-                    <span>خام: {fmt(kpi?.rawMaterialsValue ?? 0)}</span>
-                    <span>مصنعة: {fmt(kpi?.manufacturedValue ?? 0)}</span>
+                    <span>خام: {fmt(liveInvKpis?.rawMaterialsTotalValue ?? 0)}</span>
+                    <span>مصنعة: {fmt(liveInvKpis?.semiFinishedTotalValue ?? 0)}</span>
                   </div>
                 </div>
 
