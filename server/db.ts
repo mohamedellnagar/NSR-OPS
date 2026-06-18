@@ -6297,17 +6297,16 @@ export async function getFinancialKpi(year: number, month: number) {
        WHERE expenseCategory='operational' AND paymentStatus IN ('paid','partial') AND YEAR(date)=? AND MONTH(date)=?`,
       [year, month]
     );
+    // مؤجل = deferred فقط (الفعلي المتبقي غير المدفوع — بدون partial)
     const [opDeferredRows] = await conn.query<any[]>(
       `SELECT COALESCE(SUM(totalAmount - COALESCE(paidAmount,0)),0) AS opDeferred
        FROM invoices
-       WHERE expenseCategory='operational' AND paymentStatus IN ('deferred','partial') AND YEAR(invoiceDate)=? AND MONTH(invoiceDate)=?`,
-      [year, month]
+       WHERE expenseCategory='operational' AND paymentStatus='deferred'`,
     );
     const [opDeferredFreeRows] = await conn.query<any[]>(
       `SELECT COALESCE(SUM(totalAmount - COALESCE(paidAmount,0)),0) AS opDeferredFree
        FROM free_invoices
-       WHERE expenseCategory='operational' AND paymentStatus IN ('deferred','partial') AND YEAR(date)=? AND MONTH(date)=?`,
-      [year, month]
+       WHERE expenseCategory='operational' AND paymentStatus='deferred'`,
     );
 
     // 1b. المشتريات الفعلية التي دخلت المخزون (stockUpdated=1) - مدفوعة وآجلة
