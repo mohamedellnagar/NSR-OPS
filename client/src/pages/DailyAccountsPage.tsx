@@ -548,6 +548,10 @@ export default function DailyAccountsPage() {
                       <span>مؤجل: {fmt((kpi as any)?.deferredDebt ?? 0)}</span>
                       <span>متبقي جزئي: {fmt((kpi as any)?.partialRemaining ?? 0)}</span>
                     </div>
+                    <div className="flex gap-3 opacity-70 border-t border-amber-200/50 pt-0.5 mt-0.5">
+                      <span>الشهر الحالي: {fmt((kpi as any)?.currentMonthDebt ?? 0)}</span>
+                      <span>شهور سابقة: {fmt((kpi as any)?.prevMonthsDebt ?? 0)}</span>
+                    </div>
                   </div>
                 </div>
 
