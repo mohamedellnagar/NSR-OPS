@@ -6284,28 +6284,29 @@ export async function getFinancialKpi(year: number, month: number) {
     );
 
     // 1c. تشغيلية مدفوعة ومؤجلة (لتفاصيل البطاقة)
+    // مدفوع = paid بالكامل + paidAmount من partial
     const [opPaidRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(totalAmount),0) AS opPaid
+      `SELECT COALESCE(SUM(CASE WHEN paymentStatus='paid' THEN totalAmount ELSE COALESCE(paidAmount,0) END),0) AS opPaid
        FROM invoices
-       WHERE expenseCategory='operational' AND paymentStatus='paid' AND YEAR(invoiceDate)=? AND MONTH(invoiceDate)=?`,
+       WHERE expenseCategory='operational' AND paymentStatus IN ('paid','partial') AND YEAR(invoiceDate)=? AND MONTH(invoiceDate)=?`,
       [year, month]
     );
     const [opPaidFreeRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(totalAmount),0) AS opPaidFree
+      `SELECT COALESCE(SUM(CASE WHEN paymentStatus='paid' THEN totalAmount ELSE COALESCE(paidAmount,0) END),0) AS opPaidFree
        FROM free_invoices
-       WHERE expenseCategory='operational' AND paymentStatus='paid' AND YEAR(date)=? AND MONTH(date)=?`,
+       WHERE expenseCategory='operational' AND paymentStatus IN ('paid','partial') AND YEAR(date)=? AND MONTH(date)=?`,
       [year, month]
     );
     const [opDeferredRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(totalAmount),0) AS opDeferred
+      `SELECT COALESCE(SUM(totalAmount - COALESCE(paidAmount,0)),0) AS opDeferred
        FROM invoices
-       WHERE expenseCategory='operational' AND paymentStatus='deferred' AND YEAR(invoiceDate)=? AND MONTH(invoiceDate)=?`,
+       WHERE expenseCategory='operational' AND paymentStatus IN ('deferred','partial') AND YEAR(invoiceDate)=? AND MONTH(invoiceDate)=?`,
       [year, month]
     );
     const [opDeferredFreeRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(totalAmount),0) AS opDeferredFree
+      `SELECT COALESCE(SUM(totalAmount - COALESCE(paidAmount,0)),0) AS opDeferredFree
        FROM free_invoices
-       WHERE expenseCategory='operational' AND paymentStatus='deferred' AND YEAR(date)=? AND MONTH(date)=?`,
+       WHERE expenseCategory='operational' AND paymentStatus IN ('deferred','partial') AND YEAR(date)=? AND MONTH(date)=?`,
       [year, month]
     );
 
