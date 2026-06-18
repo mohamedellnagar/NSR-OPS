@@ -6412,7 +6412,9 @@ export async function getFinancialKpi(year: number, month: number) {
     const rawMaterialsValue = snapshot ? parseFloat(snapshot.rawMaterialsValue) : liveRawMaterialsValue;
     const butcherValue = snapshot ? parseFloat(snapshot.butcherValue) : liveButcherValue;
     const manufacturedValue = snapshot ? parseFloat(snapshot.manufacturedValue) : liveManufacturedValue;
-    const currentInventoryValue = snapshot ? parseFloat(snapshot.totalValue) : liveCurrentInventoryValue;
+    const currentInventoryValue = snapshot
+      ? parseFloat(snapshot.rawMaterialsValue) + parseFloat(snapshot.manufacturedValue)
+      : liveCurrentInventoryValue;
 
     const settings = (settingsRows as any[])[0];
     // مخزون أول المدة: إقفال الشهر السابق إن وُجد، وإلا القيمة العامة من الإعدادات
