@@ -6327,17 +6327,21 @@ export async function getFinancialKpi(year: number, month: number) {
       `SELECT COALESCE(SUM(totalAmount - COALESCE(paidAmount,0)),0) AS debt
        FROM free_invoices WHERE paymentStatus NOT IN ('paid','cancelled')`
     );
-    // المديونية التشغيلية والغير تشغيلية
+    // المديونية التشغيلية والغير تشغيلية مع تفصيل مؤجل/جزئي
     const [opDebtRows] = await conn.query<any[]>(
       `SELECT
         COALESCE(SUM(CASE WHEN expenseCategory='operational' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS opDebt,
-        COALESCE(SUM(CASE WHEN expenseCategory!='operational' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS nonOpDebt
+        COALESCE(SUM(CASE WHEN expenseCategory!='operational' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS nonOpDebt,
+        COALESCE(SUM(CASE WHEN paymentStatus='deferred' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS deferredDebt,
+        COALESCE(SUM(CASE WHEN paymentStatus='partial' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS partialRemaining
        FROM invoices WHERE paymentStatus NOT IN ('paid','cancelled')`
     );
     const [opDebtFreeRows] = await conn.query<any[]>(
       `SELECT
         COALESCE(SUM(CASE WHEN expenseCategory='operational' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS opDebt,
-        COALESCE(SUM(CASE WHEN expenseCategory!='operational' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS nonOpDebt
+        COALESCE(SUM(CASE WHEN expenseCategory!='operational' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS nonOpDebt,
+        COALESCE(SUM(CASE WHEN paymentStatus='deferred' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS deferredDebt,
+        COALESCE(SUM(CASE WHEN paymentStatus='partial' THEN totalAmount - COALESCE(paidAmount,0) ELSE 0 END),0) AS partialRemaining
        FROM free_invoices WHERE paymentStatus NOT IN ('paid','cancelled')`
     );
 
@@ -6461,6 +6465,8 @@ export async function getFinancialKpi(year: number, month: number) {
       totalDebt,
       opDebt: parseFloat((opDebtRows as any[])[0].opDebt ?? '0') + parseFloat((opDebtFreeRows as any[])[0].opDebt ?? '0'),
       nonOpDebt: parseFloat((opDebtRows as any[])[0].nonOpDebt ?? '0') + parseFloat((opDebtFreeRows as any[])[0].nonOpDebt ?? '0'),
+      deferredDebt: parseFloat((opDebtRows as any[])[0].deferredDebt ?? '0') + parseFloat((opDebtFreeRows as any[])[0].deferredDebt ?? '0'),
+      partialRemaining: parseFloat((opDebtRows as any[])[0].partialRemaining ?? '0') + parseFloat((opDebtFreeRows as any[])[0].partialRemaining ?? '0'),
       rawMaterialsValue,
       butcherValue,
       manufacturedValue,
