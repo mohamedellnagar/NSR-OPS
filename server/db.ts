@@ -6406,7 +6406,7 @@ export async function getFinancialKpi(year: number, month: number) {
     const liveRawMaterialsValue = parseFloat((rawRows as any[])[0].rawValue ?? '0');
     const liveButcherValue = parseFloat((butcherRows as any[])[0].butcherValue ?? '0');
     const liveManufacturedValue = parseFloat((manufacturedRows as any[])[0].manufacturedValue ?? '0');
-    const liveCurrentInventoryValue = liveRawMaterialsValue + liveButcherValue + liveManufacturedValue;
+    const liveCurrentInventoryValue = liveRawMaterialsValue + liveManufacturedValue;
 
     const isMonthClosed = !!snapshot;
     const rawMaterialsValue = snapshot ? parseFloat(snapshot.rawMaterialsValue) : liveRawMaterialsValue;
