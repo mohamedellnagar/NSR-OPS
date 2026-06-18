@@ -552,11 +552,10 @@ export default function DailyAccountsPage() {
                     </div>
                     <span className="text-xs font-semibold text-teal-700 dark:text-teal-300">قيمة المخزون الحالي</span>
                   </div>
-                  <p className="text-lg font-bold text-teal-700 dark:text-teal-200">{fmt(kpi?.currentInventoryValue ?? 0)} <span className="text-xs font-normal">د.إ</span></p>
+                  <p className="text-lg font-bold text-teal-700 dark:text-teal-200">{fmt((kpi?.rawMaterialsValue ?? 0) + (kpi?.manufacturedValue ?? 0))} <span className="text-xs font-normal">د.إ</span></p>
                   <div className="flex gap-3 mt-0.5 text-[10px] text-teal-600/70 dark:text-teal-400/60 flex-wrap">
                     <span>خام: {fmt(kpi?.rawMaterialsValue ?? 0)}</span>
                     <span>مصنعة: {fmt(kpi?.manufacturedValue ?? 0)}</span>
-                    <span>جزار: {fmt(kpi?.butcherValue ?? 0)}</span>
                   </div>
                 </div>
 
