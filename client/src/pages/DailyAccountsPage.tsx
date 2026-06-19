@@ -627,7 +627,7 @@ export default function DailyAccountsPage() {
                   {(() => {
                     const netSales = kpi?.netSales ?? kpi?.totalSales ?? monthTotalSales;
                     const collectionDiff = netSales - restaurantReceived;
-                    const collectionPct = netSales > 0 ? (restaurantReceived / netSales) * 100 : 0;
+                    const collectionPct = netSales > 0 ? (collectionDiff / netSales) * 100 : 0;
                     return (
                       <div className="mt-1.5 pt-1.5 border-t border-cyan-200 dark:border-cyan-700/50">
                         <p className="text-[10px] text-cyan-600/70 dark:text-cyan-400/60">نسبة الحساب من صافي المبيعات</p>
