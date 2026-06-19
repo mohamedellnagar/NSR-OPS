@@ -20,8 +20,8 @@ function calcPlatformPrice(restaurantPrice: number, commissionRate: number, disc
   return restaurantPrice * (1 + commissionRate / 100 + discountRate / 100);
 }
 
-function calcRestaurantNet(restaurantPrice: number, deliveryFee: number) {
-  return restaurantPrice - deliveryFee;
+function calcRestaurantNet(platformPrice: number, commissionRate: number, discountRate: number, deliveryFee: number) {
+  return platformPrice * (1 - commissionRate / 100 - discountRate / 100) - deliveryFee;
 }
 
 export default function DeliveryPricingPage() {
@@ -159,7 +159,7 @@ export default function DeliveryPricingPage() {
                     const color = PLATFORM_COLORS[p.platform] ?? PLATFORM_COLORS.talabat;
                     const platformPrice = calcPlatformPrice(restaurantPrice, parseFloat(p.commissionRate), parseFloat(p.discountRate));
                     const deliveryFee = parseFloat(p.deliveryFee ?? 0);
-                    const netForRestaurant = calcRestaurantNet(restaurantPrice, deliveryFee);
+                    const netForRestaurant = calcRestaurantNet(platformPrice, parseFloat(p.commissionRate), parseFloat(p.discountRate), deliveryFee);
                     const netPct = platformPrice > 0 ? (netForRestaurant / platformPrice) * 100 : 0;
                     return (
                       <td key={p.id} className={`px-3 py-2 text-center border-l ${color.bg}`}>
