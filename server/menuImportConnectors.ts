@@ -55,8 +55,17 @@ export function detectPlatform(url: string): "talabat" | "keeta" | "noon" | "unk
 async function fetchPageHtml(url: string, platform: string): Promise<string> {
   const puppeteer = await import("puppeteer-core");
 
+  const chromePaths = [
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+  ];
+  const { existsSync } = await import("fs");
+  const executablePath = chromePaths.find(p => existsSync(p)) ?? "/usr/bin/chromium";
+
   const browser = await puppeteer.default.launch({
-    executablePath: "/usr/bin/chromium",
+    executablePath,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",

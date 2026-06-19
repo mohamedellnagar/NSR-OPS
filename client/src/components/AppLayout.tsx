@@ -119,6 +119,7 @@ export default function AppLayout({ children, noPadding }: { children: ReactNode
         { key: "menuOfferDesigner", href: "/menu-offer-designer", icon: <Sparkles size={18} /> },
         { key: "menu", href: "/menu", icon: <Menu size={18} /> },
         { key: "menuImport", href: "/menu-import", icon: <Download size={18} /> },
+        { key: "deliveryPricing", href: "/delivery-pricing", icon: <Truck size={18} /> },
         { key: "priceComparison", href: "/price-comparison", icon: <Scale size={18} /> },
         { key: "productionPlanning", href: "/production-planning", icon: <Calculator size={18} /> },
         { key: "shifts", href: "/shifts", icon: <CalendarCheck size={18} /> },

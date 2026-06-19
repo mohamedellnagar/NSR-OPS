@@ -48,6 +48,7 @@ import PrintMenuPage from "./pages/PrintMenuPage";
 import FoodCostPage from "./pages/FoodCostPage";
 import MonthlyPayments from "./pages/MonthlyPayments";
 import MenuImportPage from "./pages/MenuImportPage";
+import DeliveryPricingPage from "./pages/DeliveryPricingPage";
 import PriceComparisonPage from "./pages/PriceComparisonPage";
 import ProductionPlanningPage from "./pages/ProductionPlanningPage";
 import MenuEngineeringPage from "./pages/MenuEngineeringPage";
@@ -185,6 +186,7 @@ function Router() {
       <Route path="/material-prices" component={() => <ProtectedRoute pageKey="materialPrices"><MaterialPricesPage /></ProtectedRoute>} />
       <Route path="/menu" component={() => <ProtectedRoute pageKey="menu"><MenuPage /></ProtectedRoute>} />
       <Route path="/menu-import" component={() => <ProtectedRoute pageKey="menuImport"><MenuImportPage /></ProtectedRoute>} />
+      <Route path="/delivery-pricing" component={() => <ProtectedRoute pageKey="deliveryPricing"><DeliveryPricingPage /></ProtectedRoute>} />
       <Route path="/price-comparison" component={() => <ProtectedRoute pageKey="priceComparison"><PriceComparisonPage /></ProtectedRoute>} />
       <Route path="/food-cost" component={() => <ProtectedRoute pageKey="foodCost"><FoodCostPage /></ProtectedRoute>} />
       <Route path="/monthly-payments" component={() => <ProtectedRoute pageKey="monthlyPayments"><MonthlyPayments /></ProtectedRoute>} />

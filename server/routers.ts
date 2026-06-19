@@ -1063,6 +1063,43 @@ export const kitchenServiceStockRouter = router({
 export type AppRouter = typeof appRouter;
 
 // ─── App Router ───────────────────────────────────────────────────────────────
+export const deliveryPricingRouter = router({
+  getPlatforms: protectedProcedure.query(async () => {
+    const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+    try {
+      const [rows] = await conn.query<any[]>(`SELECT * FROM delivery_platform_settings WHERE isActive=1 ORDER BY id`);
+      return rows as any[];
+    } finally { await conn.end(); }
+  }),
+
+  updatePlatform: warehouseProcedure
+    .input(z.object({
+      id: z.number(),
+      commissionRate: z.number().min(0).max(100),
+      discountRate: z.number().min(0).max(100),
+    }))
+    .mutation(async ({ input }) => {
+      const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+      try {
+        await conn.execute(
+          `UPDATE delivery_platform_settings SET commissionRate=?, discountRate=? WHERE id=?`,
+          [input.commissionRate, input.discountRate, input.id]
+        );
+        return { success: true };
+      } finally { await conn.end(); }
+    }),
+
+  getProducts: protectedProcedure.query(async () => {
+    const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+    try {
+      const [rows] = await conn.query<any[]>(
+        `SELECT id, name, nameAr, price, cost, categoryReference FROM products WHERE isActive=1 AND price > 0 ORDER BY categoryReference, name`
+      );
+      return rows as any[];
+    } finally { await conn.end(); }
+  }),
+});
+
 export const appRouter = router({
   system: systemRouter,
   menuImport: menuImportRouter,
@@ -1077,6 +1114,7 @@ export const appRouter = router({
   dailyFlash: dailyFlashRouter,
   pos: posRouter,
   kitchenServiceStock: kitchenServiceStockRouter,
+  deliveryPricing: deliveryPricingRouter,
   // ─── Custom Auth (email + password) ─────────────────────────────────────────
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
