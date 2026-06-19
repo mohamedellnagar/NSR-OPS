@@ -294,6 +294,7 @@ HTML:
 ${truncatedHtml}`;
 
   const response = await invokeLLM({
+    model: "gpt-4o-mini",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
