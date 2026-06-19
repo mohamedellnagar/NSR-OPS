@@ -32,6 +32,7 @@ export default function DeliveryPricingPage() {
   const [editingPlatform, setEditingPlatform] = useState<number | null>(null);
   const [editCommission, setEditCommission] = useState("");
   const [editDiscount, setEditDiscount] = useState("");
+  const [editDeliveryFee, setEditDeliveryFee] = useState("");
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("الكل");
 
@@ -61,13 +62,13 @@ export default function DeliveryPricingPage() {
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-sm font-bold ${color.text}`}>{color.logo} {p.platformAr}</span>
                 {!isEditing ? (
-                  <button onClick={() => { setEditCommission(String(p.commissionRate)); setEditDiscount(String(p.discountRate)); setEditingPlatform(p.id); }}
+                  <button onClick={() => { setEditCommission(String(p.commissionRate)); setEditDiscount(String(p.discountRate)); setEditDeliveryFee(String(p.deliveryFee ?? 0)); setEditingPlatform(p.id); }}
                     className="p-1 rounded hover:bg-white/50 transition-colors">
                     <Pencil className="w-3 h-3 text-slate-400" />
                   </button>
                 ) : (
                   <div className="flex gap-1">
-                    <button onClick={() => updatePlatformMut.mutate({ id: p.id, commissionRate: parseFloat(editCommission) || 0, discountRate: parseFloat(editDiscount) || 0 })}
+                    <button onClick={() => updatePlatformMut.mutate({ id: p.id, commissionRate: parseFloat(editCommission) || 0, discountRate: parseFloat(editDiscount) || 0, deliveryFee: parseFloat(editDeliveryFee) || 0 })}
                       className="p-1 rounded hover:bg-emerald-100 text-emerald-600"><Check className="w-3 h-3" /></button>
                     <button onClick={() => setEditingPlatform(null)} className="p-1 rounded hover:bg-red-100 text-red-500"><X className="w-3 h-3" /></button>
                   </div>
@@ -83,11 +84,16 @@ export default function DeliveryPricingPage() {
                     <p className="text-[10px] text-muted-foreground mb-0.5">خصم %</p>
                     <Input value={editDiscount} onChange={e => setEditDiscount(e.target.value)} type="number" className="h-7 text-sm" />
                   </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">رسم توصيل د.إ</p>
+                    <Input value={editDeliveryFee} onChange={e => setEditDeliveryFee(e.target.value)} type="number" className="h-7 text-sm" />
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-0.5">
                   <p className={`text-xs ${color.text}`}>كوميشن: <span className="font-bold">{p.commissionRate}%</span></p>
                   <p className={`text-xs ${color.text}`}>خصم: <span className="font-bold">{p.discountRate}%</span></p>
+                  <p className={`text-xs ${color.text}`}>توصيل: <span className="font-bold">{fmt(parseFloat(p.deliveryFee ?? 0))} د.إ</span></p>
                   <p className={`text-xs font-bold ${color.text} mt-1`}>
                     إجمالي: +{(parseFloat(p.commissionRate) + parseFloat(p.discountRate)).toFixed(1)}%
                   </p>

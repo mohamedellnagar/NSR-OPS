@@ -1077,13 +1077,14 @@ export const deliveryPricingRouter = router({
       id: z.number(),
       commissionRate: z.number().min(0).max(100),
       discountRate: z.number().min(0).max(100),
+      deliveryFee: z.number().min(0),
     }))
     .mutation(async ({ input }) => {
       const conn = await mysql.createConnection(process.env.DATABASE_URL!);
       try {
         await conn.execute(
-          `UPDATE delivery_platform_settings SET commissionRate=?, discountRate=? WHERE id=?`,
-          [input.commissionRate, input.discountRate, input.id]
+          `UPDATE delivery_platform_settings SET commissionRate=?, discountRate=?, deliveryFee=? WHERE id=?`,
+          [input.commissionRate, input.discountRate, input.deliveryFee, input.id]
         );
         return { success: true };
       } finally { await conn.end(); }
