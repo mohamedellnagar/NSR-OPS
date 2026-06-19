@@ -20,6 +20,10 @@ function calcPlatformPrice(restaurantPrice: number, commissionRate: number, disc
   return restaurantPrice * (1 + commissionRate / 100 + discountRate / 100);
 }
 
+function calcRestaurantNet(restaurantPrice: number, deliveryFee: number) {
+  return restaurantPrice - deliveryFee;
+}
+
 export default function DeliveryPricingPage() {
   const utils = trpc.useUtils();
   const { data: platforms = [], isLoading: platformsLoading } = trpc.deliveryPricing.getPlatforms.useQuery();
@@ -154,11 +158,18 @@ export default function DeliveryPricingPage() {
                   {platforms.map((p: any) => {
                     const color = PLATFORM_COLORS[p.platform] ?? PLATFORM_COLORS.talabat;
                     const platformPrice = calcPlatformPrice(restaurantPrice, parseFloat(p.commissionRate), parseFloat(p.discountRate));
-                    const diff = platformPrice - restaurantPrice;
+                    const deliveryFee = parseFloat(p.deliveryFee ?? 0);
+                    const netForRestaurant = calcRestaurantNet(restaurantPrice, deliveryFee);
+                    const netPct = platformPrice > 0 ? (netForRestaurant / platformPrice) * 100 : 0;
                     return (
-                      <td key={p.id} className={`px-3 py-2.5 text-center border-l ${color.bg}`}>
-                        <p className={`font-bold ${color.text}`}>{fmt(platformPrice)}</p>
-                        <p className="text-[10px] text-muted-foreground">+{fmt(diff)}</p>
+                      <td key={p.id} className={`px-3 py-2 text-center border-l ${color.bg}`}>
+                        <p className={`font-bold text-sm ${color.text}`}>{fmt(platformPrice)}</p>
+                        <div className="mt-1 pt-1 border-t border-current/10">
+                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                            ✓ {fmt(netForRestaurant)} د.إ
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">{netPct.toFixed(1)}% من السعر</p>
+                        </div>
                       </td>
                     );
                   })}
