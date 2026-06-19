@@ -1075,6 +1075,7 @@ export const deliveryPricingRouter = router({
   updatePlatform: warehouseProcedure
     .input(z.object({
       id: z.number(),
+      markupRate: z.number().min(0),
       commissionRate: z.number().min(0).max(100),
       discountRate: z.number().min(0).max(100),
       deliveryFee: z.number().min(0),
@@ -1083,8 +1084,8 @@ export const deliveryPricingRouter = router({
       const conn = await mysql.createConnection(process.env.DATABASE_URL!);
       try {
         await conn.execute(
-          `UPDATE delivery_platform_settings SET commissionRate=?, discountRate=?, deliveryFee=? WHERE id=?`,
-          [input.commissionRate, input.discountRate, input.deliveryFee, input.id]
+          `UPDATE delivery_platform_settings SET markupRate=?, commissionRate=?, discountRate=?, deliveryFee=? WHERE id=?`,
+          [input.markupRate, input.commissionRate, input.discountRate, input.deliveryFee, input.id]
         );
         return { success: true };
       } finally { await conn.end(); }

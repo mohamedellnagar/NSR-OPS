@@ -16,12 +16,14 @@ function fmt(n: number) {
   return n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-function calcPlatformPrice(restaurantPrice: number, commissionRate: number, discountRate: number) {
-  return restaurantPrice * (1 + commissionRate / 100 + discountRate / 100);
+// سعر البيع = سعر المطعم × (1 + markup%)
+function calcListPrice(restaurantPrice: number, markupRate: number) {
+  return restaurantPrice * (1 + markupRate / 100);
 }
 
-function calcRestaurantNet(platformPrice: number, commissionRate: number, discountRate: number, deliveryFee: number) {
-  return platformPrice * (1 - commissionRate / 100 - discountRate / 100) - deliveryFee;
+// يدخل المطعم = سعر البيع × (1 − كوميشن% − خصم%) − توصيل
+function calcRestaurantNet(listPrice: number, commissionRate: number, discountRate: number, deliveryFee: number) {
+  return listPrice * (1 - commissionRate / 100 - discountRate / 100) - deliveryFee;
 }
 
 export default function DeliveryPricingPage() {
@@ -34,6 +36,7 @@ export default function DeliveryPricingPage() {
   });
 
   const [editingPlatform, setEditingPlatform] = useState<number | null>(null);
+  const [editMarkup, setEditMarkup] = useState("");
   const [editCommission, setEditCommission] = useState("");
   const [editDiscount, setEditDiscount] = useState("");
   const [editDeliveryFee, setEditDeliveryFee] = useState("");
@@ -66,13 +69,13 @@ export default function DeliveryPricingPage() {
               <div className="flex items-center justify-between mb-2">
                 <span className={`text-sm font-bold ${color.text}`}>{color.logo} {p.platformAr}</span>
                 {!isEditing ? (
-                  <button onClick={() => { setEditCommission(String(p.commissionRate)); setEditDiscount(String(p.discountRate)); setEditDeliveryFee(String(p.deliveryFee ?? 0)); setEditingPlatform(p.id); }}
+                  <button onClick={() => { setEditMarkup(String(p.markupRate ?? 55)); setEditCommission(String(p.commissionRate)); setEditDiscount(String(p.discountRate)); setEditDeliveryFee(String(p.deliveryFee ?? 0)); setEditingPlatform(p.id); }}
                     className="p-1 rounded hover:bg-white/50 transition-colors">
                     <Pencil className="w-3 h-3 text-slate-400" />
                   </button>
                 ) : (
                   <div className="flex gap-1">
-                    <button onClick={() => updatePlatformMut.mutate({ id: p.id, commissionRate: parseFloat(editCommission) || 0, discountRate: parseFloat(editDiscount) || 0, deliveryFee: parseFloat(editDeliveryFee) || 0 })}
+                    <button onClick={() => updatePlatformMut.mutate({ id: p.id, markupRate: parseFloat(editMarkup) || 0, commissionRate: parseFloat(editCommission) || 0, discountRate: parseFloat(editDiscount) || 0, deliveryFee: parseFloat(editDeliveryFee) || 0 })}
                       className="p-1 rounded hover:bg-emerald-100 text-emerald-600"><Check className="w-3 h-3" /></button>
                     <button onClick={() => setEditingPlatform(null)} className="p-1 rounded hover:bg-red-100 text-red-500"><X className="w-3 h-3" /></button>
                   </div>
@@ -80,6 +83,10 @@ export default function DeliveryPricingPage() {
               </div>
               {isEditing ? (
                 <div className="space-y-1.5">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground mb-0.5">زيادة سعر البيع %</p>
+                    <Input value={editMarkup} onChange={e => setEditMarkup(e.target.value)} type="number" className="h-7 text-sm" />
+                  </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground mb-0.5">كوميشن %</p>
                     <Input value={editCommission} onChange={e => setEditCommission(e.target.value)} type="number" className="h-7 text-sm" />
@@ -95,12 +102,10 @@ export default function DeliveryPricingPage() {
                 </div>
               ) : (
                 <div className="space-y-0.5">
+                  <p className={`text-xs font-bold ${color.text}`}>سعر البيع: +<span>{p.markupRate ?? 55}%</span></p>
                   <p className={`text-xs ${color.text}`}>كوميشن: <span className="font-bold">{p.commissionRate}%</span></p>
                   <p className={`text-xs ${color.text}`}>خصم: <span className="font-bold">{p.discountRate}%</span></p>
                   <p className={`text-xs ${color.text}`}>توصيل: <span className="font-bold">{fmt(parseFloat(p.deliveryFee ?? 0))} د.إ</span></p>
-                  <p className={`text-xs font-bold ${color.text} mt-1`}>
-                    إجمالي: +{(parseFloat(p.commissionRate) + parseFloat(p.discountRate)).toFixed(1)}%
-                  </p>
                 </div>
               )}
             </div>
@@ -160,7 +165,8 @@ export default function DeliveryPricingPage() {
                     const commission = parseFloat(p.commissionRate);
                     const discount = parseFloat(p.discountRate);
                     const deliveryFee = parseFloat(p.deliveryFee ?? 0);
-                    const listPrice = calcPlatformPrice(restaurantPrice, commission, discount);
+                    const markupRate = parseFloat(p.markupRate ?? 55);
+                    const listPrice = calcListPrice(restaurantPrice, markupRate);
                     const priceAfterDiscount = listPrice * (1 - discount / 100);
                     const netForRestaurant = calcRestaurantNet(listPrice, commission, discount, deliveryFee);
                     return (
@@ -196,7 +202,7 @@ export default function DeliveryPricingPage() {
                 </td>
                 {platforms.map((p: any) => {
                   const color = PLATFORM_COLORS[p.platform] ?? PLATFORM_COLORS.talabat;
-                  const avg = filtered.reduce((s: number, prod: any) => s + calcPlatformPrice(parseFloat(prod.price ?? 0), parseFloat(p.commissionRate), parseFloat(p.discountRate)), 0) / filtered.length;
+                  const avg = filtered.reduce((s: number, prod: any) => s + calcListPrice(parseFloat(prod.price ?? 0), parseFloat(p.markupRate ?? 55)), 0) / filtered.length;
                   return (
                     <td key={p.id} className={`px-3 py-2 text-center font-bold ${color.text} border-l`}>
                       {fmt(avg)}
