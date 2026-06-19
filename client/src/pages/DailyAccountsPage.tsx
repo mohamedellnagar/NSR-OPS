@@ -624,6 +624,19 @@ export default function DailyAccountsPage() {
                   <p className={`text-xs font-bold mt-1 ${restaurantDiff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                     {restaurantDiff >= 0 ? '+' : '−'}{fmt(Math.abs(restaurantDiff))} د.إ — {restaurantDiff >= 0 ? 'للمطعم' : 'على المطعم'}
                   </p>
+                  {(() => {
+                    const netSales = kpi?.netSales ?? kpi?.totalSales ?? monthTotalSales;
+                    const collectionDiff = restaurantReceived - netSales;
+                    const collectionPct = netSales > 0 ? (restaurantReceived / netSales) * 100 : 0;
+                    return (
+                      <div className="mt-1.5 pt-1.5 border-t border-cyan-200 dark:border-cyan-700/50">
+                        <p className="text-[10px] text-cyan-600/70 dark:text-cyan-400/60">نسبة الحساب (استلام ÷ صافي المبيعات)</p>
+                        <p className={`text-xs font-bold ${collectionDiff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {collectionPct.toFixed(1)}% &nbsp;·&nbsp; {collectionDiff >= 0 ? '+' : '−'}{fmt(Math.abs(collectionDiff))} د.إ
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
 
               </div>
