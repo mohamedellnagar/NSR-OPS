@@ -1095,9 +1095,20 @@ export const deliveryPricingRouter = router({
     const conn = await mysql.createConnection(process.env.DATABASE_URL!);
     try {
       const [rows] = await conn.query<any[]>(
-        `SELECT id, name, nameAr, price, cost, categoryReference FROM products WHERE isActive=1 AND price > 0 ORDER BY categoryReference, name`
+        `SELECT id, name, nameAr, price, categoryReference FROM products WHERE isActive=1 AND price > 0 ORDER BY categoryReference, name`
       );
-      return rows as any[];
+      const products = rows as any[];
+      // حساب تكلفة كل وصفة من المكونات
+      const withCost = await Promise.all(products.map(async (p) => {
+        try {
+          const ingredients = await getProductIngredients(p.id, 1);
+          const totalCost = (ingredients as any[]).reduce((s: number, ing: any) => s + ing.totalCost, 0);
+          return { ...p, cost: parseFloat(totalCost.toFixed(4)) };
+        } catch {
+          return { ...p, cost: 0 };
+        }
+      }));
+      return withCost;
     } finally { await conn.end(); }
   }),
 });

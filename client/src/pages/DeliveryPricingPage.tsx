@@ -151,6 +151,7 @@ export default function DeliveryPricingPage() {
               <tr><td colSpan={2 + platforms.length} className="text-center py-12 text-muted-foreground">لا توجد وصفات</td></tr>
             ) : filtered.map((product: any, i: number) => {
               const restaurantPrice = parseFloat(product.price ?? 0);
+              const recipeCost = parseFloat(product.cost ?? 0);
               return (
                 <tr key={product.id} className={`border-b transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/30 ${i % 2 === 0 ? '' : 'bg-slate-50/50 dark:bg-slate-800/10'}`}>
                   <td className="px-3 py-2.5 sticky right-0 bg-white dark:bg-card z-10 border-l">
@@ -179,10 +180,15 @@ export default function DeliveryPricingPage() {
                           <p className="font-semibold text-xs text-amber-600 dark:text-amber-400">{fmt(priceAfterDiscount)}</p>
                           <p className="text-[10px] text-muted-foreground">بعد الخصم {discount > 0 ? `(−${discount}%)` : ''}</p>
                         </div>
-                        {/* يدخل المطعم */}
+                        {/* يدخل المطعم + تكلفة الوصفة */}
                         <div className="mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/10">
-                          <p className="font-bold text-xs text-emerald-600 dark:text-emerald-400">{fmt(netForRestaurant)}</p>
-                          <p className="text-[10px] text-muted-foreground">يدخل المطعم</p>
+                          <div className="flex items-center justify-center gap-2">
+                            <p className="font-bold text-xs text-emerald-600 dark:text-emerald-400">{fmt(netForRestaurant)}</p>
+                            {recipeCost > 0 && (
+                              <p className="text-xs text-rose-500 dark:text-rose-400">({fmt(recipeCost)})</p>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">يدخل المطعم {recipeCost > 0 ? '· تكلفة' : ''}</p>
                         </div>
                       </td>
                     );
