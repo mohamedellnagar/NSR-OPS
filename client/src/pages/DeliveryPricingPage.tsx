@@ -157,18 +157,26 @@ export default function DeliveryPricingPage() {
                   </td>
                   {platforms.map((p: any) => {
                     const color = PLATFORM_COLORS[p.platform] ?? PLATFORM_COLORS.talabat;
-                    const platformPrice = calcPlatformPrice(restaurantPrice, parseFloat(p.commissionRate), parseFloat(p.discountRate));
+                    const commission = parseFloat(p.commissionRate);
+                    const discount = parseFloat(p.discountRate);
                     const deliveryFee = parseFloat(p.deliveryFee ?? 0);
-                    const netForRestaurant = calcRestaurantNet(platformPrice, parseFloat(p.commissionRate), parseFloat(p.discountRate), deliveryFee);
-                    const netPct = platformPrice > 0 ? (netForRestaurant / platformPrice) * 100 : 0;
+                    const listPrice = calcPlatformPrice(restaurantPrice, commission, discount);
+                    const priceAfterDiscount = listPrice * (1 - discount / 100);
+                    const netForRestaurant = calcRestaurantNet(listPrice, commission, discount, deliveryFee);
                     return (
-                      <td key={p.id} className={`px-3 py-2 text-center border-l ${color.bg}`}>
-                        <p className={`font-bold text-sm ${color.text}`}>{fmt(platformPrice)}</p>
-                        <div className="mt-1 pt-1 border-t border-current/10">
-                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                            ✓ {fmt(netForRestaurant)} د.إ
-                          </p>
-                          <p className="text-[10px] text-muted-foreground">{netPct.toFixed(1)}% من السعر</p>
+                      <td key={p.id} className={`px-2 py-2 text-center border-l ${color.bg}`}>
+                        {/* سعر البيع */}
+                        <p className={`font-bold text-sm ${color.text}`}>{fmt(listPrice)}</p>
+                        <p className="text-[10px] text-muted-foreground">سعر البيع</p>
+                        {/* بعد الخصم */}
+                        <div className="mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/10">
+                          <p className="font-semibold text-xs text-amber-600 dark:text-amber-400">{fmt(priceAfterDiscount)}</p>
+                          <p className="text-[10px] text-muted-foreground">بعد الخصم {discount > 0 ? `(−${discount}%)` : ''}</p>
+                        </div>
+                        {/* يدخل المطعم */}
+                        <div className="mt-1.5 pt-1.5 border-t border-black/10 dark:border-white/10">
+                          <p className="font-bold text-xs text-emerald-600 dark:text-emerald-400">{fmt(netForRestaurant)}</p>
+                          <p className="text-[10px] text-muted-foreground">يدخل المطعم</p>
                         </div>
                       </td>
                     );
