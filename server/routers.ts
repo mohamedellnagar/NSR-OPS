@@ -4479,8 +4479,31 @@ ${statsContext}
       .input(z.object({
         openingStockValue: z.number().min(0),
         openingStockDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "التاريخ يجب أن يكون بصيغة YYYY-MM-DD" }),
+        year: z.number().optional(),
+        month: z.number().min(1).max(12).optional(),
       }))
-      .mutation(({ input }) => updateOpeningStock(input.openingStockValue, input.openingStockDate)),
+      .mutation(async ({ input }) => {
+        // لو في year/month → حدّث openingStockValue في snapshot الشهر ده
+        if (input.year && input.month) {
+          const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+          try {
+            const [existing] = await conn.query<any[]>(
+              `SELECT id FROM monthly_stock_snapshots WHERE year=? AND month=?`, [input.year, input.month]
+            );
+            if ((existing as any[]).length > 0) {
+              await conn.execute(
+                `UPDATE monthly_stock_snapshots SET openingStockValue=? WHERE year=? AND month=?`,
+                [input.openingStockValue, input.year, input.month]
+              );
+            } else {
+              // شهر مفتوح → احفظ في app_settings
+              await updateOpeningStock(input.openingStockValue, input.openingStockDate);
+            }
+          } finally { await conn.end(); }
+          return { success: true };
+        }
+        return updateOpeningStock(input.openingStockValue, input.openingStockDate);
+      }),
 
     closeMonth: warehouseProcedure
       .input(z.object({ year: z.number(), month: z.number().min(1).max(12) }))

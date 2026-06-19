@@ -276,7 +276,6 @@ export default function DailyAccountsPage() {
     { refetchOnWindowFocus: false }
   );
   const { data: liveInvKpis } = trpc.materials.kpis.useQuery(undefined, { refetchOnWindowFocus: false });
-  // قيمة مخزون أول المدة دايماً من app_settings مباشرة (مش متأثرة بالشهر المعروض)
   const { data: openingStockSettings, refetch: refetchOpeningStock } = trpc.dailyAccounts.getOpeningStock.useQuery(undefined, { refetchOnWindowFocus: false });
   const updateOpeningStockMut = trpc.dailyAccounts.updateOpeningStock.useMutation({
     onSuccess: () => {
@@ -426,8 +425,15 @@ export default function DailyAccountsPage() {
                   </div>
                   {!editingOpeningStock ? (
                     <button onClick={() => {
-                      setOpeningStockInput(String(openingStockSettings?.openingStockValue ?? kpi?.openingStockValue ?? 0));
-                      setOpeningStockDateInput(openingStockSettings?.openingStockDate ?? '');
+                      // للشهور المقفولة: القيمة من snapshot. للشهر الجاري: من app_settings
+                      const displayVal = kpi?.isMonthClosed
+                        ? (kpi?.openingStockValue ?? 0)
+                        : (openingStockSettings?.openingStockValue ?? kpi?.openingStockValue ?? 0);
+                      const displayDate = kpi?.isMonthClosed
+                        ? ''
+                        : (openingStockSettings?.openingStockDate ?? '');
+                      setOpeningStockInput(String(displayVal));
+                      setOpeningStockDateInput(displayDate);
                       setEditingOpeningStock(true);
                     }} className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
                       <Pencil className="w-3 h-3 text-slate-400" />
@@ -437,8 +443,13 @@ export default function DailyAccountsPage() {
                       <button onClick={() => {
                         const val = parseFloat(openingStockInput);
                         if (isNaN(val) || val < 0) { toast.error("أدخل قيمة صحيحة للمخزون"); return; }
-                        if (!/^\d{4}-\d{2}-\d{2}$/.test(openingStockDateInput)) { toast.error("اختر تاريخاً صحيحاً"); return; }
-                        updateOpeningStockMut.mutate({ openingStockValue: val, openingStockDate: openingStockDateInput });
+                        if (!kpi?.isMonthClosed && !/^\d{4}-\d{2}-\d{2}$/.test(openingStockDateInput)) { toast.error("اختر تاريخاً صحيحاً"); return; }
+                        updateOpeningStockMut.mutate({
+                          openingStockValue: val,
+                          openingStockDate: openingStockDateInput || `${selectedYear}-${String(selectedMonth).padStart(2,'0')}-01`,
+                          year: selectedYear,
+                          month: selectedMonth,
+                        });
                       }} className="p-1 rounded hover:bg-emerald-100 text-emerald-600">
                         <Check className="w-3 h-3" />
                       </button>
@@ -451,12 +462,19 @@ export default function DailyAccountsPage() {
                 {editingOpeningStock ? (
                   <div className="space-y-1.5">
                     <Input value={openingStockInput} onChange={e => setOpeningStockInput(e.target.value)} className="h-7 text-sm" placeholder="القيمة" type="number" />
-                    <Input value={openingStockDateInput} onChange={e => setOpeningStockDateInput(e.target.value)} className="h-7 text-xs" type="date" />
+                    {!kpi?.isMonthClosed && (
+                      <Input value={openingStockDateInput} onChange={e => setOpeningStockDateInput(e.target.value)} className="h-7 text-xs" type="date" />
+                    )}
                   </div>
                 ) : (
                   <>
-                    <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{fmt(openingStockSettings?.openingStockValue ?? kpi?.openingStockValue ?? 0)} <span className="text-xs font-normal">د.إ</span></p>
-                    {openingStockSettings?.openingStockDate && <p className="text-[10px] text-slate-400 mt-0.5">بتاريخ {openingStockSettings.openingStockDate}</p>}
+                    <p className="text-lg font-bold text-slate-700 dark:text-slate-200">
+                      {fmt(kpi?.isMonthClosed ? (kpi?.openingStockValue ?? 0) : (openingStockSettings?.openingStockValue ?? kpi?.openingStockValue ?? 0))}
+                      <span className="text-xs font-normal"> د.إ</span>
+                    </p>
+                    {!kpi?.isMonthClosed && openingStockSettings?.openingStockDate && (
+                      <p className="text-[10px] text-slate-400 mt-0.5">بتاريخ {openingStockSettings.openingStockDate}</p>
+                    )}
                   </>
                 )}
               </div>
