@@ -21,9 +21,9 @@ function calcListPrice(restaurantPrice: number, markupRate: number) {
   return restaurantPrice * (1 + markupRate / 100);
 }
 
-// يدخل المطعم = سعر البيع × (1 − كوميشن% − خصم%) − توصيل
-function calcRestaurantNet(listPrice: number, commissionRate: number, discountRate: number, deliveryFee: number) {
-  return listPrice * (1 - commissionRate / 100 - discountRate / 100) - deliveryFee;
+// يدخل المطعم = (سعر البيع بعد الخصم) × (1 − كوميشن%) − توصيل
+function calcRestaurantNet(priceAfterDiscount: number, commissionRate: number, deliveryFee: number) {
+  return priceAfterDiscount * (1 - commissionRate / 100) - deliveryFee;
 }
 
 export default function DeliveryPricingPage() {
@@ -168,7 +168,7 @@ export default function DeliveryPricingPage() {
                     const markupRate = parseFloat(p.markupRate ?? 55);
                     const listPrice = calcListPrice(restaurantPrice, markupRate);
                     const priceAfterDiscount = listPrice * (1 - discount / 100);
-                    const netForRestaurant = calcRestaurantNet(listPrice, commission, discount, deliveryFee);
+                    const netForRestaurant = calcRestaurantNet(priceAfterDiscount, commission, deliveryFee);
                     return (
                       <td key={p.id} className={`px-2 py-2 text-center border-l ${color.bg}`}>
                         {/* سعر البيع */}
