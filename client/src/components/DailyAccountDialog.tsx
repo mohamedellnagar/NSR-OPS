@@ -768,7 +768,7 @@ export default function DailyAccountDialog({
                     <Input
                       type="number"
                       step="0.001"
-                      min="0"
+                      {...(key === "supplyExtra" ? {} : { min: "0" })}
                       placeholder="0"
                       value={form[key as keyof DailyFormState]}
                       onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}

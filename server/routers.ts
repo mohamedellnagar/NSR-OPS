@@ -4327,7 +4327,7 @@ ${statsContext}
         expensesFixed: z.number().min(0).default(0),
         supplyToRestaurant: z.number().min(0).default(0),
         supplyToManagement: z.number().min(0).default(0),
-        supplyExtra: z.number().min(0).default(0),
+        supplyExtra: z.number().default(0),
         staffMeals: z.number().min(0).optional(),
         notes: z.string().optional(),
         stockValue: z.number().min(0).optional(),
