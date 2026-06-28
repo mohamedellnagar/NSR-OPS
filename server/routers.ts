@@ -4485,6 +4485,23 @@ ${statsContext}
       .input(z.object({ id: z.number() }))
       .mutation(({ input }) => deleteDailyAccount(input.id)),
 
+    updateCarryForward: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        carryForwardToNext: z.number(),
+        reason: z.string().min(1, "السبب مطلوب"),
+      }))
+      .mutation(async ({ input }) => {
+        const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+        try {
+          await conn.execute(
+            `UPDATE daily_accounts SET carryForwardToNext=?, carryForwardEditReason=? WHERE id=?`,
+            [input.carryForwardToNext, input.reason, input.id]
+          );
+        } finally { await conn.end(); }
+        return { success: true };
+      }),
+
     expensesForDate: protectedProcedure
       .input(z.object({ accountDate: z.string() }))
       .query(({ input }) => getFreeInvoiceExpensesForDate(input.accountDate)),

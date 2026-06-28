@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import DailyAccountDialog, { emptyDailyForm, type DailyFormState as SharedDailyFormState } from "@/components/DailyAccountDialog";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -40,9 +41,9 @@ import {
   Info,
   Tag,
   Package,
+  Pencil,
   AlertTriangle,
   BarChart3,
-  Pencil,
   Check,
   X,
   ToggleLeft,
@@ -194,6 +195,11 @@ export default function DailyAccountsPage() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [dialogForm, setDialogForm] = useState<SharedDailyFormState>(emptyDailyForm(today));
   const [editingDate, setEditingDate] = useState<string | null>(null);
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const [carryEditAccount, setCarryEditAccount] = useState<{ id: number; current: number } | null>(null);
+  const [carryEditValue, setCarryEditValue] = useState("");
+  const [carryEditReason, setCarryEditReason] = useState("");
 
   // ─── Queries ─────────────────────────────────────────────────────────────
   const { data: accounts = [], refetch } = trpc.dailyAccounts.list.useQuery(
@@ -205,6 +211,15 @@ export default function DailyAccountsPage() {
     onSuccess: () => {
       toast.success("تم الحذف");
       setDeleteId(null);
+      refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const updateCarryForwardMut = trpc.dailyAccounts.updateCarryForward.useMutation({
+    onSuccess: () => {
+      toast.success("تم تعديل المبلغ المرحّل");
+      setCarryEditAccount(null);
       refetch();
     },
     onError: (e) => toast.error(e.message),
@@ -731,11 +746,27 @@ export default function DailyAccountsPage() {
                     </td>
                     {/* Carry Forward */}
                     <td className="px-2 py-2.5 text-center font-semibold bg-sky-50/40 dark:bg-sky-950/10 border-l">
-                      {(() => {
-                        const v = parseFloat(String(a.carryForwardToNext ?? 0));
-                        if (v === 0) return <span className="opacity-30">—</span>;
-                        return <span className={v >= 0 ? 'text-sky-700 dark:text-sky-400' : 'text-red-600 dark:text-red-400'}>{fmt(v)}</span>;
-                      })()}
+                      <div className="flex items-center justify-center gap-1">
+                        {(() => {
+                          const v = parseFloat(String(a.carryForwardToNext ?? 0));
+                          if (v === 0) return <span className="opacity-30">—</span>;
+                          return <span className={v >= 0 ? 'text-sky-700 dark:text-sky-400' : 'text-red-600 dark:text-red-400'}>{fmt(v)}</span>;
+                        })()}
+                        {isAdmin && (
+                          <button
+                            title={(a as any).carryForwardEditReason ? `آخر سبب: ${(a as any).carryForwardEditReason}` : "تعديل المرحل"}
+                            onClick={() => {
+                              const v = parseFloat(String(a.carryForwardToNext ?? 0));
+                              setCarryEditAccount({ id: a.id, current: v });
+                              setCarryEditValue(String(v));
+                              setCarryEditReason("");
+                            }}
+                            className="p-0.5 rounded hover:bg-sky-100 dark:hover:bg-sky-900/30"
+                          >
+                            <Pencil className="w-3 h-3 text-sky-500" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                     {/* Sales */}
                     <td className="px-2 py-2.5 text-center text-muted-foreground border-l">{parseFloat(a.salesCash) > 0 ? fmt(parseFloat(a.salesCash)) : <span className="opacity-30">—</span>}</td>
@@ -938,6 +969,53 @@ export default function DailyAccountsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Carry Forward Manual Edit (Admin only) */}
+      <Dialog open={carryEditAccount !== null} onOpenChange={(o) => !o && setCarryEditAccount(null)}>
+        <DialogContent dir="rtl">
+          <DialogHeader>
+            <DialogTitle>تعديل المبلغ المرحّل</DialogTitle>
+            <DialogDescription>هذا التعديل متاح للأدمن فقط، ويجب ذكر السبب.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">المبلغ المرحّل الجديد</Label>
+              <Input
+                type="number"
+                step="0.001"
+                value={carryEditValue}
+                onChange={(e) => setCarryEditValue(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">سبب التعديل *</Label>
+              <Textarea
+                value={carryEditReason}
+                onChange={(e) => setCarryEditReason(e.target.value)}
+                placeholder="اكتب سبب التعديل..."
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCarryEditAccount(null)}>إلغاء</Button>
+            <Button
+              disabled={!carryEditReason.trim() || updateCarryForwardMut.isPending}
+              onClick={() => {
+                if (!carryEditAccount) return;
+                updateCarryForwardMut.mutate({
+                  id: carryEditAccount.id,
+                  carryForwardToNext: parseFloat(carryEditValue) || 0,
+                  reason: carryEditReason.trim(),
+                });
+              }}
+            >
+              حفظ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

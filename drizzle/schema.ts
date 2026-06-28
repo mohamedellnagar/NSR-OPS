@@ -912,6 +912,8 @@ export const dailyAccounts = mysqlTable(
 
     // ── المبلغ المرحّل (مخزّن من الملف أو محسوب) ────────────────────────────
     carryForwardToNext: decimal("carryForwardToNext", { precision: 12, scale: 3 }),
+    // ── سبب التعديل اليدوي على المرحل (أدمن فقط) ────────────────────────────
+    carryForwardEditReason: varchar("carryForwardEditReason", { length: 500 }),
 
     // ── وجبات الموظفين ────────────────────────────────────────────────────────
     staffMeals: decimal("staffMeals", { precision: 12, scale: 3 }),
