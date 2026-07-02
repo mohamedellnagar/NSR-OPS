@@ -527,8 +527,8 @@ export default function DailyAccountsPage() {
                 </div>
                 <p className="text-lg font-bold text-orange-700 dark:text-orange-200">{fmt(kpi?.cogsValue ?? 0)} <span className="text-xs font-normal">د.إ</span></p>
                 <div className="text-[10px] text-orange-500/70 dark:text-orange-400/60 mt-0.5 space-y-0.5">
-                  <div>أول: {fmt(kpi?.openingStockValue ?? 0)} + تشغيلية: {fmt(kpi?.totalOpEx ?? 0)}</div>
-                  <div className="ps-3">(مدفوع: {fmt(kpi?.opPaid ?? 0)} / مؤجل: {fmt(kpi?.opDeferred ?? 0)})</div>
+                  <div>أول: {fmt(kpi?.openingStockValue ?? 0)} + تشغيلية الشهر: {fmt((kpi as any)?.currentMonthOpEx ?? kpi?.totalOpEx ?? 0)}</div>
+                  <div className="ps-3">تشغيلية إجمالي: {fmt(kpi?.totalOpEx ?? 0)} (مدفوع: {fmt(kpi?.opPaid ?? 0)} / مؤجل: {fmt(kpi?.opDeferred ?? 0)})</div>
                   <div>− مخزون آخر: {fmt(kpi?.currentInventoryValue ?? 0)}</div>
                 </div>
               </div>
@@ -795,7 +795,7 @@ export default function DailyAccountsPage() {
                     <td className="px-2 py-2.5 text-center text-purple-700 dark:text-purple-300 bg-purple-50/30 dark:bg-purple-950/10 border-l text-sm">
                       {(a as any).staffMeals != null && parseFloat((a as any).staffMeals) > 0 ? fmt(parseFloat((a as any).staffMeals)) : <span className="opacity-30">—</span>}
                     </td>
-                    {/* Food Cost % */}
+                    {/* Food Cost % — محفوظ وقت التسجيل (ثابت لكل يوم) */}
                     {(() => {
                       const pct = (a as any).foodCostPercent != null ? parseFloat((a as any).foodCostPercent) : null;
                       return (

@@ -5448,7 +5448,7 @@ export async function saveDailyAccount(data: {
   try {
     const [yr, mo] = data.accountDate.split('-').map(Number);
     const kpi = await getFinancialKpi(yr, mo);
-    if (kpi.netSales > 0 && kpi.cogsValue > 0) {
+    if (kpi.netSales > 0 && kpi.cogsValue != null) {
       foodCostPercent = parseFloat(((kpi.cogsValue / kpi.netSales) * 100).toFixed(2));
     }
   } catch (err: any) {
@@ -6295,16 +6295,20 @@ export async function getFinancialKpi(year: number, month: number) {
        WHERE expenseCategory='operational' AND paymentStatus IN ('paid','partial') AND YEAR(date)=? AND MONTH(date)=?`,
       [year, month]
     );
-    // مؤجل = deferred فقط (الفعلي المتبقي غير المدفوع — بدون partial)
+    // مؤجل = المتبقي غير المدفوع من فواتير الشهر (deferred + متبقي partial)
     const [opDeferredRows] = await conn.query<any[]>(
       `SELECT COALESCE(SUM(totalAmount - COALESCE(paidAmount,0)),0) AS opDeferred
        FROM invoices
-       WHERE expenseCategory='operational' AND paymentStatus='deferred'`,
+       WHERE expenseCategory='operational'
+         AND paymentStatus IN ('deferred','partial')`,
+      []
     );
     const [opDeferredFreeRows] = await conn.query<any[]>(
       `SELECT COALESCE(SUM(totalAmount - COALESCE(paidAmount,0)),0) AS opDeferredFree
        FROM free_invoices
-       WHERE expenseCategory='operational' AND paymentStatus='deferred'`,
+       WHERE expenseCategory='operational'
+         AND paymentStatus IN ('deferred','partial')`,
+      []
     );
 
     // 1b. المشتريات الفعلية التي دخلت المخزون (stockUpdated=1) - مدفوعة وآجلة
@@ -6384,22 +6388,24 @@ export async function getFinancialKpi(year: number, month: number) {
 
     const s = (salesRows as any[])[0];
     const totalSales = parseFloat(s.totalSales ?? '0');
-    // التشغيلية = موردين + حرة (مباشرة من الفواتير - مطابقة لصفحة الفواتير)
-    const totalOpEx = parseFloat((opExRows as any[])[0].totalOpEx ?? '0') +
-                      parseFloat((opExFreeRows as any[])[0].totalOpExFree ?? '0');
+    // فواتير الشهر الحالي فقط (للـ COGS)
+    const currentMonthOpEx = parseFloat((opExRows as any[])[0].totalOpEx ?? '0') +
+                             parseFloat((opExFreeRows as any[])[0].totalOpExFree ?? '0');
     // الصيانة = موردين + حرة (مباشرة من الفواتير)
     const totalMainEx = parseFloat((mainExRows as any[])[0].totalMainEx ?? '0') +
                         parseFloat((mainExFreeRows as any[])[0].totalMainExFree ?? '0');
-    // تشغيلية مدفوعة — نفس طريقة جدول الحسابات اليومية (حسب تاريخ الدفع الفعلي)
-    const monthExpensesData = await getMonthExpenses(year, month);
-    const opPaid = Object.values(monthExpensesData).reduce((sum, d) => sum + d.operational + d.supplierTotal, 0);
-    // مؤجل = الفعلي المتبقي من الفواتير المؤجلة (deferred فقط)
+    // مؤجل = إجمالي المتبقي من كل الشهور (مش بس الشهر الحالي)
     const opDeferred = parseFloat((opDeferredRows as any[])[0].opDeferred ?? '0') +
                        parseFloat((opDeferredFreeRows as any[])[0].opDeferredFree ?? '0');
+    // مدفوع = اللي اتدفع نقدي فعلاً في الشهر الحالي (من الحسابات اليومية)
+    const monthExpensesData = await getMonthExpenses(year, month);
+    const opPaid = Object.values(monthExpensesData).reduce((sum, d) => sum + d.operational + d.supplierTotal, 0);
+    // تشغيلية المعروضة = مدفوع + مؤجل
+    const totalOpEx = opPaid + opDeferred;
     const totalFixedEx = parseFloat(s.totalFixedEx ?? '0');
     const totalSupply = parseFloat(s.totalSupply ?? '0');
     const totalStaffMeals = parseFloat(s.totalStaffMeals ?? '0');
-    const totalExpenses = totalOpEx + totalMainEx + totalFixedEx;
+    const totalExpenses = currentMonthOpEx + totalMainEx + totalFixedEx;
 
     // صافي المبيعات = إجمالي المبيعات (لا يوجد جدول خصومات حالياً)
     const netSales = totalSales;
@@ -6493,15 +6499,15 @@ export async function getFinancialKpi(year: number, month: number) {
       ? null
       : toLocalDateStr(rawDate);
 
-    // تكلفة البضاعة المستخدمة = مخزون أول + التشغيلية - مخزون آخر - أكل الاستاف
-    const cogsPurchases = totalOpEx;
+    // تكلفة البضاعة المستخدمة = مخزون أول + فواتير الشهر فقط - مخزون آخر - أكل الاستاف
+    const cogsPurchases = currentMonthOpEx;
     const cogsValue = openingStockValue + cogsPurchases - currentInventoryValue - totalStaffMeals;
 
     // مجمل الربح = صافي المبيعات - تكلفة البضاعة المستخدمة
     const grossProfit = netSales - cogsValue;
     const grossMargin = netSales > 0 ? (grossProfit / netSales) * 100 : 0;
-    // الربح قبل الثابت = مجمل الربح - المصروفات التشغيلية (تشغيلية + صيانة)
-    const profitBeforeFixed = grossProfit - totalOpEx - totalMainEx;
+    // الربح قبل الثابت = مجمل الربح - مصروفات الشهر الحالي (تشغيلية + صيانة)
+    const profitBeforeFixed = grossProfit - currentMonthOpEx - totalMainEx;
     const profitBeforeFixedMargin = netSales > 0 ? (profitBeforeFixed / netSales) * 100 : 0;
     // صافي الربح = الربح قبل الثابت - المصروفات الثابتة
     const netProfit = profitBeforeFixed - totalFixedEx;
@@ -6511,6 +6517,7 @@ export async function getFinancialKpi(year: number, month: number) {
       totalSales,
       netSales,
       totalOpEx,
+      currentMonthOpEx,
       opPaid,
       opDeferred,
       totalMainEx,
