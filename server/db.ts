@@ -5402,28 +5402,25 @@ export async function saveDailyAccount(data: {
     );
     carryFromPrev = Number((prevRows as any[])[0]?.carryForwardToNext || 0);
 
-    // 2. جلب المصروفات من invoice_payment_history (المصدر الوحيد الدقيق)
-    // يسجّل الدفعات الفعلية لكل يوم بدقة (بما فيها الدفعات الجزئية الفعلية لكل يوم)
-    // JOIN لتجنّب السجلات اليتيمة (orphan records)
-    const [suppHistRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(h.paidAmount),0) as total
-       FROM invoice_payment_history h
-       INNER JOIN invoices i ON h.invoiceId = i.id
-       WHERE h.invoiceType = 'supplier'
-       AND DATE(CONVERT_TZ(h.paymentDate, '+00:00', '+04:00') - INTERVAL 6 HOUR) = ?`,
+    // 2. جلب المصروفات من نفس المصدر الذي يعرضه الـ dialog (invoices + free_invoices)
+    // نفس المنطق الذي تستخدمه getFreeInvoiceExpensesForDate
+    const [suppRows] = await conn.query<any[]>(
+      `SELECT COALESCE(SUM(totalAmount),0) as total
+       FROM invoices
+       WHERE paymentStatus='paid'
+       AND DATE(CONVERT_TZ(COALESCE(paidAt, updatedAt), '+00:00', '+04:00') - INTERVAL 6 HOUR) = ?`,
       [data.accountDate]
     );
-    expensesSupplier = Number((suppHistRows as any[])[0]?.total || 0);
+    expensesSupplier = Number((suppRows as any[])[0]?.total || 0);
 
-    const [freeHistRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(h.paidAmount),0) as total
-       FROM invoice_payment_history h
-       INNER JOIN free_invoices fi ON h.invoiceId = fi.id
-       WHERE h.invoiceType = 'free'
-       AND DATE(CONVERT_TZ(h.paymentDate, '+00:00', '+04:00') - INTERVAL 6 HOUR) = ?`,
+    const [freeRows] = await conn.query<any[]>(
+      `SELECT COALESCE(SUM(totalAmount),0) as total
+       FROM free_invoices
+       WHERE paymentStatus='paid'
+       AND DATE(CONVERT_TZ(COALESCE(paidAt, updatedAt), '+00:00', '+04:00') - INTERVAL 6 HOUR) = ?`,
       [data.accountDate]
     );
-    expensesFree = Number((freeHistRows as any[])[0]?.total || 0);
+    expensesFree = Number((freeRows as any[])[0]?.total || 0);
   } finally {
     await conn.end();
   }
@@ -6249,7 +6246,8 @@ export async function getFinancialKpi(year: number, month: number) {
       `SELECT
         COALESCE(SUM(salesCash+salesCard+salesKita+salesOrders+salesCareem+salesDeliveroo+salesNoon),0) AS totalSales,
         COALESCE(SUM(expensesFixed),0) AS totalFixedEx,
-        COALESCE(SUM(supplyToRestaurant+supplyToManagement+supplyExtra),0) AS totalSupply
+        COALESCE(SUM(supplyToRestaurant+supplyToManagement+supplyExtra),0) AS totalSupply,
+        COALESCE(SUM(staffMeals),0) AS totalStaffMeals
        FROM daily_accounts
        WHERE accountDate BETWEEN ? AND ?`,
       [monthStart, monthEnd]
@@ -6400,6 +6398,7 @@ export async function getFinancialKpi(year: number, month: number) {
                        parseFloat((opDeferredFreeRows as any[])[0].opDeferredFree ?? '0');
     const totalFixedEx = parseFloat(s.totalFixedEx ?? '0');
     const totalSupply = parseFloat(s.totalSupply ?? '0');
+    const totalStaffMeals = parseFloat(s.totalStaffMeals ?? '0');
     const totalExpenses = totalOpEx + totalMainEx + totalFixedEx;
 
     // صافي المبيعات = إجمالي المبيعات (لا يوجد جدول خصومات حالياً)
@@ -6494,9 +6493,9 @@ export async function getFinancialKpi(year: number, month: number) {
       ? null
       : toLocalDateStr(rawDate);
 
-    // تكلفة البضاعة المستخدمة = مخزون أول + التشغيلية فقط - مخزون آخر
+    // تكلفة البضاعة المستخدمة = مخزون أول + التشغيلية - مخزون آخر - أكل الاستاف
     const cogsPurchases = totalOpEx;
-    const cogsValue = openingStockValue + cogsPurchases - currentInventoryValue;
+    const cogsValue = openingStockValue + cogsPurchases - currentInventoryValue - totalStaffMeals;
 
     // مجمل الربح = صافي المبيعات - تكلفة البضاعة المستخدمة
     const grossProfit = netSales - cogsValue;
