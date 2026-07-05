@@ -527,8 +527,11 @@ export default function DailyAccountsPage() {
                 </div>
                 <p className="text-lg font-bold text-orange-700 dark:text-orange-200">{fmt(kpi?.cogsValue ?? 0)} <span className="text-xs font-normal">د.إ</span></p>
                 <div className="text-[10px] text-orange-500/70 dark:text-orange-400/60 mt-0.5 space-y-0.5">
-                  <div>أول: {fmt(kpi?.openingStockValue ?? 0)} + تشغيلية الشهر: {fmt((kpi as any)?.currentMonthOpEx ?? kpi?.totalOpEx ?? 0)}</div>
-                  <div className="ps-3">تشغيلية إجمالي: {fmt(kpi?.totalOpEx ?? 0)} (مدفوع: {fmt(kpi?.opPaid ?? 0)} / مؤجل: {fmt(kpi?.opDeferred ?? 0)})</div>
+                  <div>أول: {fmt(kpi?.openingStockValue ?? 0)} + تشغيلية إجمالي: {fmt(kpi?.totalOpEx ?? 0)}</div>
+                  <div className="ps-3">(مدفوع: {fmt(kpi?.opPaid ?? 0)} / مؤجل: {fmt(kpi?.opDeferred ?? 0)})</div>
+                  {(kpi as any)?.totalStaffMeals != null && (kpi as any).totalStaffMeals > 0 && (
+                    <div className="ps-3">− أكل الاستاف: {fmt((kpi as any).totalStaffMeals)}</div>
+                  )}
                   <div>− مخزون آخر: {fmt(kpi?.currentInventoryValue ?? 0)}</div>
                 </div>
               </div>

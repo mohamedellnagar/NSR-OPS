@@ -149,9 +149,21 @@ function GaugeIndicator({
 export default function AnalyticsDashboardPage() {
   const [flowDays, setFlowDays] = useState(14);
   const [consumedDays, setConsumedDays] = useState(30);
-  // فلتر التاريخ لقسم P&L
-  const [plStartDate, setPlStartDate] = useState("");
-  const [plEndDate, setPlEndDate] = useState("");
+  // فلتر التاريخ لقسم P&L — افتراضياً الشهر الحالي فقط
+  // (كل شهر له فود كوست خاص به يتغيّر حسب مبيعات ومصروفات نفس الشهر)
+  const currentMonthRange = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return { start: `${y}-${m}-01`, end: `${y}-${m}-${d}` };
+  }, []);
+  const [plStartDate, setPlStartDate] = useState(currentMonthRange.start);
+  const [plEndDate, setPlEndDate] = useState(currentMonthRange.end);
+
+  // هل الفلتر الحالي هو الشهر الحالي بالضبط؟
+  const isCurrentMonth =
+    plStartDate === currentMonthRange.start && plEndDate === currentMonthRange.end;
 
   const plFilter = useMemo(() => {
     if (!plStartDate && !plEndDate) return undefined;
@@ -263,7 +275,7 @@ export default function AnalyticsDashboardPage() {
             <Scale size={18} className="text-primary" />
             <h2 className="text-lg font-bold text-foreground">تحليل الأرباح والخسائر</h2>
             <Badge variant="outline" className="text-xs">
-              {plStartDate || plEndDate ? "فترة مخصصة" : "كل الفترات"}
+              {isCurrentMonth ? "الشهر الحالي" : plStartDate || plEndDate ? "فترة مخصصة" : "كل الفترات"}
             </Badge>
           </div>
           {/* فلتر التاريخ */}
@@ -288,14 +300,14 @@ export default function AnalyticsDashboardPage() {
                 className="text-xs bg-transparent border-none outline-none text-foreground w-32 cursor-pointer"
               />
             </div>
-            {(plStartDate || plEndDate) && (
+            {!isCurrentMonth && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => { setPlStartDate(""); setPlEndDate(""); }}
+                onClick={() => { setPlStartDate(currentMonthRange.start); setPlEndDate(currentMonthRange.end); }}
                 className="text-xs h-7 px-2 text-muted-foreground hover:text-foreground"
               >
-                مسح الفلتر ✕
+                الشهر الحالي ↺
               </Button>
             )}
           </div>

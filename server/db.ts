@@ -5389,44 +5389,14 @@ export async function saveDailyAccount(data: {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
 
-  // حساب carryForwardToNext من قاعدة البيانات مباشرة
-  // 1. جلب المرحّل من اليوم السابق
-  const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
-  let carryFromPrev = 0;
-  let expensesSupplier = 0;
-  let expensesFree = 0;
-  try {
-    const [prevRows] = await conn.query<any[]>(
-      `SELECT carryForwardToNext FROM daily_accounts WHERE accountDate < ? ORDER BY accountDate DESC LIMIT 1`,
-      [data.accountDate]
-    );
-    carryFromPrev = Number((prevRows as any[])[0]?.carryForwardToNext || 0);
-
-    // 2. جلب المصروفات من نفس المصدر الذي يعرضه الـ dialog (invoices + free_invoices)
-    // نفس المنطق الذي تستخدمه getFreeInvoiceExpensesForDate
-    const [suppRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(totalAmount),0) as total
-       FROM invoices
-       WHERE paymentStatus='paid'
-       AND DATE(CONVERT_TZ(COALESCE(paidAt, updatedAt), '+00:00', '+04:00') - INTERVAL 6 HOUR) = ?`,
-      [data.accountDate]
-    );
-    expensesSupplier = Number((suppRows as any[])[0]?.total || 0);
-
-    const [freeRows] = await conn.query<any[]>(
-      `SELECT COALESCE(SUM(totalAmount),0) as total
-       FROM free_invoices
-       WHERE paymentStatus='paid'
-       AND DATE(CONVERT_TZ(COALESCE(paidAt, updatedAt), '+00:00', '+04:00') - INTERVAL 6 HOUR) = ?`,
-      [data.accountDate]
-    );
-    expensesFree = Number((freeRows as any[])[0]?.total || 0);
-  } finally {
-    await conn.end();
-  }
+  // حساب carryForwardToNext — بنفس منطق ومصدر ديالوج اليومية بالضبط،
+  // حتى تطابق القيمة المخزّنة الرقم الذي يعرضه ويحفظه المستخدم.
+  // 1. المرحّل من اليوم السابق: إعادة حساب حيّة مستوى واحد (غير معتمدة على قيمة مخزّنة متقادمة)
+  const carryFromPrev = await getPreviousDayCarryForward(data.accountDate);
+  // 2. مصروفات اليوم الحالي من نفس مصدر الـ dialog (موردين + حرّة + جزئي)
+  const totalExpenses = await computeDayExpenses(data.accountDate, data.expensesFixed);
 
   // معادلة المرحّل لليوم التالي
-  const totalExpenses = expensesSupplier + expensesFree + data.expensesFixed;
   const carryToNext =
     carryFromPrev +
     data.salesCash +
@@ -5878,20 +5848,71 @@ export async function updateFreeInvoiceExpenseCategory(id: number, category: str
     .where(eq(freeInvoices.id, id));
 }
 
-/** Get previous day's carry-forward balance */
+/**
+ * إجمالي مصروفات يوم معيّن — بنفس مصدر ومنطق ما يعرضه ديالوج اليومية بالضبط:
+ * فواتير موردين مدفوعة + فواتير حرّة مدفوعة + الدفعات الجزئية + المصروف الثابت.
+ * (أو operational+maintenance+الثابت في حالة البيانات اليدوية من الإكسل)
+ */
+export async function computeDayExpenses(accountDate: string, expensesFixed: number): Promise<number> {
+  const e: any = await getFreeInvoiceExpensesForDate(accountDate);
+  if (e.isManual) {
+    return Number(e.operational || 0) + Number(e.maintenance || 0) + expensesFixed;
+  }
+  const freeTotal = (e.invoices || []).reduce((s: number, i: any) => s + Number(i.totalAmount || 0), 0);
+  const partial = Number(e.partialSupplierTotal || 0) + Number(e.partialFreeTotal || 0);
+  return Number(e.supplierInvoicesTotal || 0) + freeTotal + partial + expensesFixed;
+}
+
+/**
+ * الرصيد المرحّل من اليوم السابق — إعادة حساب حيّة للشهر بالكامل.
+ *
+ * المنطق: كل شهر يبدأ من "قفل الشهر السابق" (آخر مرحّل مخزّن قبل أول الشهر) كرصيد افتتاحي ثابت،
+ * ثم نعيد حساب أيام الشهر واحداً واحداً بمصروفاتها الحالية (live) حتى اليوم المطلوب.
+ *
+ * لماذا الشهر كامل وليس مستوى واحد: لو أعدنا حساب اليوم السابق فقط مع الارتكاز على قيمة مخزّنة
+ * متقادمة لليوم قبله، تتسرّب القِدَم وتظهر أرقام غير متسقة بين يوم ويوم (مثال: 223.41 مقابل 358.41).
+ * إعادة حساب الشهر من نقطة ارتكاز ثابتة تضمن أن "مرحّل اليوم N التالي" = "مرحّل اليوم N+1 السابق" دائماً.
+ */
 export async function getPreviousDayCarryForward(accountDate: string): Promise<number> {
-  // استخدام raw SQL مباشرة لتجنّب أي مشكلة في Drizzle ORM
+  const monthStart = `${accountDate.slice(0, 7)}-01`;
+
   const conn = await (await import('mysql2/promise')).createConnection(process.env.DATABASE_URL!);
+  let anchor = 0;
+  let priorDays: any[] = [];
   try {
-    const [rows] = await conn.query<any[]>(
+    // نقطة الارتكاز: قفل الشهر السابق (آخر مرحّل مخزّن قبل أول الشهر الحالي)
+    const [anchorRows] = await conn.query<any[]>(
       `SELECT carryForwardToNext FROM daily_accounts WHERE accountDate < ? ORDER BY accountDate DESC LIMIT 1`,
-      [accountDate]
+      [monthStart]
     );
-    if (!rows[0]) return 0;
-    return Number(rows[0].carryForwardToNext || 0);
+    anchor = Number((anchorRows as any[])[0]?.carryForwardToNext || 0);
+
+    // أيام الشهر الحالي السابقة لليوم المطلوب (نعيد حسابها حيًّا بالترتيب)
+    const [rows] = await conn.query<any[]>(
+      `SELECT DATE_FORMAT(accountDate, '%Y-%m-%d') AS accountDate,
+              salesCash, supplyToRestaurant, supplyExtra, supplyToManagement, expensesFixed
+       FROM daily_accounts
+       WHERE accountDate >= ? AND accountDate < ?
+       ORDER BY accountDate ASC`,
+      [monthStart, accountDate]
+    );
+    priorDays = rows as any[];
   } finally {
     await conn.end();
   }
+
+  let running = anchor;
+  for (const day of priorDays) {
+    const expenses = await computeDayExpenses(day.accountDate, Number(day.expensesFixed || 0));
+    running =
+      running +
+      Number(day.salesCash || 0) +
+      Number(day.supplyToRestaurant || 0) +
+      Number(day.supplyExtra || 0) -
+      expenses -
+      Number(day.supplyToManagement || 0);
+  }
+  return running;
 }
 
 // ─── Monthly Expenses for Daily Accounts Table ────────────────────────────────
@@ -6499,8 +6520,9 @@ export async function getFinancialKpi(year: number, month: number) {
       ? null
       : toLocalDateStr(rawDate);
 
-    // تكلفة البضاعة المستخدمة = مخزون أول + فواتير الشهر فقط - مخزون آخر - أكل الاستاف
-    const cogsPurchases = currentMonthOpEx;
+    // تكلفة البضاعة المستخدمة = مخزون أول + إجمالي المصروفات التشغيلية - مخزون آخر - أكل الاستاف
+    // إجمالي المصروفات التشغيلية = المدفوع + المؤجل (totalOpEx)
+    const cogsPurchases = totalOpEx;
     const cogsValue = openingStockValue + cogsPurchases - currentInventoryValue - totalStaffMeals;
 
     // مجمل الربح = صافي المبيعات - تكلفة البضاعة المستخدمة
@@ -6526,6 +6548,7 @@ export async function getFinancialKpi(year: number, month: number) {
       totalSupply,
       totalPurchases,
       cogsValue,
+      totalStaffMeals,
       grossProfit,
       grossMargin,
       profitBeforeFixed,
