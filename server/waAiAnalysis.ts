@@ -15,6 +15,7 @@
  */
 
 import mysql from "mysql2/promise";
+import { getConn } from "./pool";
 import { invokeLLM } from "./_core/llm";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -98,10 +99,6 @@ Priority rules:
 `;
 
 // ─── DB Connection ────────────────────────────────────────────────────────────
-
-async function getConn() {
-  return mysql.createConnection(process.env.DATABASE_URL!);
-}
 
 // ─── Retry Helper ─────────────────────────────────────────────────────────────
 

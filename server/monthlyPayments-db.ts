@@ -1,9 +1,6 @@
 import mysql from "mysql2/promise";
+import { getConn } from "./pool";
 import { getBusinessDayTzOffset } from "./db";
-
-async function getConn() {
-  return mysql.createConnection(process.env.DATABASE_URL!);
-}
 
 export type PaymentCategory = "salaries" | "rent" | "utilities" | "other";
 export type PaymentStatus = "paid" | "pending" | "overdue";

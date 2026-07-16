@@ -1,3 +1,4 @@
+import { getConn } from "./pool";
 /**
  * variance-analysis-db.ts
  * Kitchen Consumption Control & Variance Analysis
@@ -64,11 +65,6 @@ export interface VarianceSummary {
   // Thresholds used
   warnThreshold: number;
   criticalThreshold: number;
-}
-
-async function getConn() {
-  const mysql = await import("mysql2/promise");
-  return mysql.createConnection(process.env.DATABASE_URL!);
 }
 
 export async function getVarianceAnalysis(

@@ -5,11 +5,8 @@
  */
 
 import mysql from "mysql2/promise";
+import { getConn } from "./pool";
 import { sendWhatsAppText } from "./whatsapp";
-
-async function getConn() {
-  return mysql.createConnection(process.env.DATABASE_URL as string);
-}
 
 /** Generate next PO number: PO-YYYY-NNNN */
 async function generateOrderNumber(conn: mysql.Connection): Promise<string> {

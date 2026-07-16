@@ -1,3 +1,4 @@
+import { getConn } from "./pool";
 /**
  * Purchase vs Expected Consumption Analysis
  * Compares: what was PURCHASED (invoice_items) vs what was EXPECTED to be consumed (sale_items × recipe_items)
@@ -14,8 +15,7 @@
  */
 
 async function getConnection() {
-  const mysql = await import("mysql2/promise");
-  return mysql.createConnection(process.env.DATABASE_URL!);
+  return getConn();
 }
 
 export interface PurchaseVsSalesRow {

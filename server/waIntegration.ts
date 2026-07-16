@@ -19,6 +19,7 @@
  */
 
 import mysql, { type Connection } from "mysql2/promise";
+import { getConn } from "./pool";
 import crypto from "crypto";
 import { broadcastNewMessage } from "./sseBroadcaster";
 
@@ -121,10 +122,6 @@ export interface WebhookProcessResult {
 }
 
 // ─── DB Connection ────────────────────────────────────────────────────────────
-
-async function getConn(): Promise<Connection> {
-  return mysql.createConnection(process.env.DATABASE_URL!);
-}
 
 // ─── Payload Extraction ───────────────────────────────────────────────────────
 

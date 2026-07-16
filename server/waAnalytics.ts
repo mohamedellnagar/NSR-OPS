@@ -23,10 +23,7 @@
 
 import mysql from "mysql2/promise";
 
-async function getConn() {
-  return mysql.createConnection(process.env.DATABASE_URL!);
-}
-
+import { getConn } from "./pool";
 // ─── Filter helpers ───────────────────────────────────────────────────────────
 
 export interface WaAnalyticsFilter {

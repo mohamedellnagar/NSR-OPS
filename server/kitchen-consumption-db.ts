@@ -1,3 +1,4 @@
+import { getConn } from "./pool";
 /**
  * kitchen-consumption-db.ts
  * Aggregates raw material consumption from:
@@ -33,11 +34,6 @@ export interface KitchenConsumptionReport {
   totalCost: number;
   totalDays: number;
   hasInventoryData: boolean;
-}
-
-async function getConn() {
-  const mysql = await import("mysql2/promise");
-  return mysql.createConnection(process.env.DATABASE_URL!);
 }
 
 export async function getKitchenConsumptionReport(

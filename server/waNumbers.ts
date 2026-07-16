@@ -4,10 +4,7 @@
  */
 import mysql from "mysql2/promise";
 
-async function getConn() {
-  return mysql.createConnection(process.env.DATABASE_URL!);
-}
-
+import { getConn } from "./pool";
 export interface WaNumber {
   id: number;
   label: string;
@@ -627,9 +624,7 @@ export async function syncAllChatsWithMessages(
           try {
             const { runFullConversationAnalysis } = await import("./waAiAnalysis");
             // Get or create instance record for AI analysis
-            const conn = await import("mysql2/promise").then((m) =>
-              m.default.createConnection(process.env.DATABASE_URL!)
-            );
+            const conn = await getConn();
             try {
               // Ensure whatsapp_instances has this number (for FK)
               await conn.execute(

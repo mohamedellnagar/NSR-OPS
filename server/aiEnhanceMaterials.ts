@@ -8,6 +8,7 @@
  */
 import OpenAI from "openai";
 import mysql from "mysql2/promise";
+import { getConn } from "./pool";
 import { getEffectiveOpenAIApiKey } from "./db";
 
 async function getOpenAI(): Promise<OpenAI> {
@@ -146,7 +147,7 @@ export async function enhanceMaterialsWithAI(
     throw new Error("OPENAI_API_KEY غير مُعد. أضف مفتاح حقيقي من صفحة الإعدادات أو ملف .env");
   }
 
-  const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+  const conn = await getConn();
 
   try {
     // Fetch materials (with category name for richer prompt).

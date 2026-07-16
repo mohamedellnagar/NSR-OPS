@@ -1,3 +1,4 @@
+import { getConn } from "./pool";
 /**
  * supplier-items-db.ts
  * Aggregates invoice items from supplier invoices with date + supplier filters.
@@ -39,11 +40,6 @@ export interface SupplierItemsReport {
   totalQty: number;
   invoiceCount: number;
   supplierList: { id: number; name: string }[];
-}
-
-async function getConn() {
-  const mysql = await import("mysql2/promise");
-  return mysql.createConnection(process.env.DATABASE_URL!);
 }
 
 export async function getSupplierItemsReport(

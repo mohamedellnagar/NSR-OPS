@@ -10,13 +10,10 @@
  */
 
 import mysql from "mysql2/promise";
+import { getConn } from "./pool";
 import { triggerEventSubscriptions } from "./whatsappScheduler";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-
-async function getConn(): Promise<mysql.Connection> {
-  return mysql.createConnection(process.env.DATABASE_URL as string);
-}
 
 /** Convert recipe quantity units (g→kg, ml→l) */
 function convertQty(qty: number, unit: string, matUnit: string): number {

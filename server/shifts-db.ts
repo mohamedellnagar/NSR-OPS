@@ -5,10 +5,7 @@
 
 import mysql from "mysql2/promise";
 
-async function getConn() {
-  return mysql.createConnection(process.env.DATABASE_URL as string);
-}
-
+import { getConn } from "./pool";
 export interface ShiftWithAssignments {
   id: number;
   shiftDate: string;
