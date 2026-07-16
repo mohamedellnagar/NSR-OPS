@@ -82,6 +82,7 @@ export async function checkEvolutionConnection(config: EvolutionConfig): Promise
 
 import * as mysql from "mysql2/promise";
 
+import { getConn } from "./pool";
 interface InvoiceReportData {
   // تفاصيل الفاتورة
   invoiceNumber: string;
@@ -197,7 +198,7 @@ function applyInvoiceTemplate(template: string, data: InvoiceReportData): string
 
 export async function sendInvoiceWhatsAppReport(data: InvoiceReportData): Promise<void> {
   try {
-    const conn = await mysql.createConnection(process.env.DATABASE_URL as string);
+    const conn = await getConn();
 
     // جلب إعدادات واتساب
     const [settingsRows] = await conn.execute(
@@ -279,7 +280,7 @@ export async function getInvoiceTotals(): Promise<{
   totalFixed: number;
   totalOther: number;
 }> {
-  const conn = await mysql.createConnection(process.env.DATABASE_URL as string);
+  const conn = await getConn();
   const sql = [
     "SELECT",
     "COALESCE(SUM(totalAmount), 0) as grandTotal,",

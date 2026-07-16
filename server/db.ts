@@ -1,5 +1,6 @@
 import { eq, and, gte, lte, like, or, desc, sql, lt, inArray } from "drizzle-orm";
 
+import { getConn } from "./pool";
 // Remove undefined/null/empty-string from INSERT objects to prevent FK/type errors in MySQL
 export function clean<T extends Record<string, any>>(obj: T): Partial<T> {
   return Object.fromEntries(
@@ -3674,7 +3675,7 @@ export async function updateAppSettings(data: Partial<{
 
 async function getRawConn() {
   const mysql = await import("mysql2/promise");
-  const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+  const conn = await getConn();
   return conn;
 }
 
@@ -5474,7 +5475,7 @@ async function _calcDailyCogsCumulative(
   year: number, month: number, dates: string[], savedStockValues: Record<string, number | null>
 ): Promise<Record<string, number>> {
   if (dates.length === 0) return {};
-  const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+  const conn = await getConn();
   try {
     const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
 
@@ -5805,9 +5806,13 @@ export async function getFreeInvoiceExpensesForDate(accountDate: string) {
 
   const freeItemsMap: Record<number, ItemRow[]> = {};
   if (allFreeIds.length > 0) {
-    const [freeItemRows] = await (await (await import('mysql2/promise')).createConnection(process.env.DATABASE_URL!)).execute<any[]>(
-      `SELECT invoiceId, description, qty, unitPrice, total FROM free_invoice_items WHERE invoiceId IN (${allFreeIds.join(',')}) ORDER BY id`,
-    ).then(async (res) => { return res; }).catch(() => [[] as any[]]);
+    const conn = await getConn();
+    let freeItemRows: any[] = [];
+    try {
+      [freeItemRows] = await conn.execute<any[]>(
+        `SELECT invoiceId, description, qty, unitPrice, total FROM free_invoice_items WHERE invoiceId IN (${allFreeIds.join(',')}) ORDER BY id`,
+      );
+    } catch { freeItemRows = []; } finally { await conn.end(); }
     for (const row of (freeItemRows as any[])) {
       if (!freeItemsMap[row.invoiceId]) freeItemsMap[row.invoiceId] = [];
       freeItemsMap[row.invoiceId].push({ description: row.description, qty: parseFloat(row.qty), unitPrice: parseFloat(row.unitPrice), total: parseFloat(row.total) });
@@ -5816,9 +5821,13 @@ export async function getFreeInvoiceExpensesForDate(accountDate: string) {
 
   const supplierItemsMap: Record<number, ItemRow[]> = {};
   if (allSupplierIds.length > 0) {
-    const [suppItemRows] = await (await (await import('mysql2/promise')).createConnection(process.env.DATABASE_URL!)).execute<any[]>(
-      `SELECT invoiceId, materialName AS description, quantity AS qty, unitPrice, totalPrice AS total FROM invoice_items WHERE invoiceId IN (${allSupplierIds.join(',')}) ORDER BY id`,
-    ).then(async (res) => { return res; }).catch(() => [[] as any[]]);
+    const conn = await getConn();
+    let suppItemRows: any[] = [];
+    try {
+      [suppItemRows] = await conn.execute<any[]>(
+        `SELECT invoiceId, materialName AS description, quantity AS qty, unitPrice, totalPrice AS total FROM invoice_items WHERE invoiceId IN (${allSupplierIds.join(',')}) ORDER BY id`,
+      );
+    } catch { suppItemRows = []; } finally { await conn.end(); }
     for (const row of (suppItemRows as any[])) {
       if (!supplierItemsMap[row.invoiceId]) supplierItemsMap[row.invoiceId] = [];
       supplierItemsMap[row.invoiceId].push({ description: row.description, qty: parseFloat(row.qty), unitPrice: parseFloat(row.unitPrice), total: parseFloat(row.total) });
@@ -5876,7 +5885,7 @@ export async function computeDayExpenses(accountDate: string, expensesFixed: num
 export async function getPreviousDayCarryForward(accountDate: string): Promise<number> {
   const monthStart = `${accountDate.slice(0, 7)}-01`;
 
-  const conn = await (await import('mysql2/promise')).createConnection(process.env.DATABASE_URL!);
+  const conn = await getConn();
   let anchor = 0;
   let priorDays: any[] = [];
   try {
@@ -6046,7 +6055,7 @@ export async function getMonthExpenses(
 
 /** Get kitchen pulls summary aggregated by material for a date range */
 export async function getKitchenPullsByRange(fromDate: string, toDate: string) {
-  const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+  const conn = await getConn();
   try {
     const tzOffset = await getBusinessDayTzOffset();
     const [rows] = await conn.execute<any[]>(`
@@ -6111,7 +6120,7 @@ export async function getAllInvoicesUnified(filters?: {
   paidDateTo?: string;
   itemName?: string;
 }) {
-  const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+  const conn = await getConn();
   try {
     const supplierParams: any[] = [];
     const freeParams: any[] = [];
@@ -6236,7 +6245,7 @@ export async function getAllInvoicesUnified(filters?: {
 
 // ─── Invoice Item Names (for filter dropdown) ────────────────────────────────
 export async function getInvoiceItemNames(): Promise<string[]> {
-  const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+  const conn = await getConn();
   try {
     // أسماء بنود فواتير الموردين (materialName)
     const [supplierItems] = await conn.execute(
@@ -6257,7 +6266,7 @@ export async function getInvoiceItemNames(): Promise<string[]> {
 
 // ─── Financial KPI Dashboard ──────────────────────────────────────────────────
 export async function getFinancialKpi(year: number, month: number) {
-  const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+  const conn = await getConn();
   try {
     const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
     const monthEnd = `${year}-${String(month).padStart(2, '0')}-31`;
@@ -6588,7 +6597,7 @@ export async function getFinancialKpi(year: number, month: number) {
 
 // ─── إقفال الشهر: تجميد قيمة المخزون الحالية كمخزون آخر المدة لهذا الشهر ──────
 export async function closeMonth(year: number, month: number, createdBy: number | null) {
-  const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+  const conn = await getConn();
   try {
     const [existing] = await conn.query<any[]>(
       `SELECT id FROM monthly_stock_snapshots WHERE year=? AND month=?`,
@@ -6642,7 +6651,7 @@ export async function closeMonth(year: number, month: number, createdBy: number 
 }
 
 export async function updateOpeningStock(openingStockValue: number, openingStockDate: string) {
-  const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+  const conn = await getConn();
   try {
     await conn.execute(
       `UPDATE app_settings SET openingStockValue=?, openingStockDate=? WHERE id=1`,
@@ -6774,7 +6783,7 @@ export async function getMaterialPriceHistory(params: {
     .orderBy(rawMaterials.nameAr, rawMaterials.name);
 
   // جلب تاريخ الأسعار من invoice_items
-  const conn = await (await import('mysql2/promise')).createConnection(process.env.DATABASE_URL!);
+  const conn = await getConn();
   try {
     const matFilter = params.materialIds && params.materialIds.length > 0
       ? `AND ii.materialId IN (${params.materialIds.map(() => '?').join(',')})`

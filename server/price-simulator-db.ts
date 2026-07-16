@@ -6,10 +6,7 @@
 import "dotenv/config";
 import mysql from "mysql2/promise";
 
-async function getConn() {
-  return mysql.createConnection({ uri: process.env.DATABASE_URL });
-}
-
+import { getConn } from "./pool";
 export interface RecipeImpact {
   productId: number;
   productName: string;

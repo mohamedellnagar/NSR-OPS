@@ -7,13 +7,10 @@
  * Updated: 2026-04-16
  */
 import mysql from "mysql2/promise";
+import { getConn } from "./pool";
 import { sendWhatsAppText, sendWhatsAppDocument } from "./whatsapp";
 import { generateDailyAccountPDF, type DailyAccountPDFData } from "./pdfGenerator";
 import { storagePut } from "./storage";
-
-async function getConn() {
-  return mysql.createConnection(process.env.DATABASE_URL!);
-}
 
 function fmt(n: number, dec = 2): string {
   const num = Number(n || 0).toFixed(dec);

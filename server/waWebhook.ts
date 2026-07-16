@@ -5,11 +5,8 @@
  */
 import type { Request, Response } from "express";
 import mysql from "mysql2/promise";
+import { getConn } from "./pool";
 import { broadcastWaEvent } from "./waWebSocket";
-
-async function getConn() {
-  return mysql.createConnection(process.env.DATABASE_URL!);
-}
 
 function extractMessageBody(msg: any): {
   body: string | null;

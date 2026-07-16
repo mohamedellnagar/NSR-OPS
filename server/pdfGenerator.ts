@@ -2,6 +2,7 @@ import PDFDocument from "pdfkit";
 import { AMIRI_REGULAR_B64, AMIRI_BOLD_B64 } from "./fontData";
 import mysql from "mysql2/promise";
 
+import { getConn } from "./pool";
 // Convert base64 font strings to Buffers for PDFKit
 const FONT_REGULAR_BUF = Buffer.from(AMIRI_REGULAR_B64, "base64");
 const FONT_BOLD_BUF = Buffer.from(AMIRI_BOLD_B64, "base64");
@@ -17,7 +18,7 @@ async function fetchMaterialsWithRecipes() {
   let conn: Awaited<ReturnType<typeof mysql.createConnection>> | null = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      conn = await mysql.createConnection(process.env.DATABASE_URL!);
+      conn = await getConn();
       break;
     } catch (err: any) {
       if (attempt === 3) throw err;
@@ -781,7 +782,7 @@ function unitConvFactor(recipeUnit: string, matUnit: string): number {
 }
 
 export async function generateRecipeCostCard(productId: number): Promise<Buffer> {
-  const conn = await mysql.createConnection(process.env.DATABASE_URL as string);
+  const conn = await getConn();
   try {
     // Fetch product
     const [pRows] = await conn.execute(

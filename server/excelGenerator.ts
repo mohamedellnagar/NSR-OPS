@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 
+import { getConn } from "./pool";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatDate(d: Date | string | null | undefined): string {
   if (!d) return "";
@@ -84,7 +85,7 @@ async function fetchWithRetry<T>(fn: (conn: import("mysql2/promise").Connection)
   let conn: import("mysql2/promise").Connection | null = null;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      conn = await mysql.createConnection(process.env.DATABASE_URL!);
+      conn = await getConn();
       break;
     } catch (err: unknown) {
       if (attempt === 3) throw err;

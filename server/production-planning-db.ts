@@ -12,10 +12,7 @@
 
 import mysql from "mysql2/promise";
 
-async function getConn() {
-  return mysql.createConnection(process.env.DATABASE_URL as string);
-}
-
+import { getConn } from "./pool";
 /** Unit conversion: recipe unit → material unit */
 function unitConvFactor(recipeUnit: string, matUnit: string): number {
   const ru = (recipeUnit || "").toLowerCase().trim();

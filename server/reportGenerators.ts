@@ -4,6 +4,7 @@
  */
 
 import mysql from "mysql2/promise";
+import { getConn } from "./pool";
 import { getBusinessDayTzOffset, calcKitchenPullRawCost, getFinancialKpi } from "./db";
 
 type ReportType = "daily_sales" | "orders_summary" | "kitchen_cost" | "inventory_value" | "waste_summary" | "system_alerts" | "warehouse_performance" | "daily_account_summary" | "daily_financial_summary";
@@ -57,10 +58,6 @@ function arabicDate(dateStr: string): string {
   } catch {
     return dateStr;
   }
-}
-
-async function getConn() {
-  return mysql.createConnection(process.env.DATABASE_URL!);
 }
 
 // // ─── Template Applier ────────────────────────────────────────────────────

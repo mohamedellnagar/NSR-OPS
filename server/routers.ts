@@ -36,6 +36,7 @@ import {
 } from "./kitchen-service-stock-db";
 import { generateReport, applyTemplateAsync, generateReportFromFullText, previewFullTextTemplate } from "./reportGenerators";
 import mysql from "mysql2/promise";
+import { getConn } from "./pool";
 import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
@@ -421,7 +422,7 @@ export const menuImportRouter = router({
   importFromUrl: protectedProcedure
     .input(z.object({ url: z.string().url() }))
     .mutation(async ({ input, ctx }) => {
-      const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+      const conn = await getConn();
       try {
         // إنشاء جلسة استيراد
         const platform = detectPlatform(input.url);
@@ -488,7 +489,7 @@ export const menuImportRouter = router({
 
   /** جلب قائمة جلسات الاستيراد */
   listSessions: protectedProcedure.query(async () => {
-    const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+    const conn = await getConn();
     try {
       const [rows] = await conn.execute(
         `SELECT id, sourceUrl, platform, status, restaurantName, restaurantNameAr, restaurantLogoUrl, itemCount, categoryCount, errorMessage, savedToDb, createdAt
@@ -504,7 +505,7 @@ export const menuImportRouter = router({
   getSessionItems: protectedProcedure
     .input(z.object({ sessionId: z.number() }))
     .query(async ({ input }) => {
-      const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+      const conn = await getConn();
       try {
         const [cats] = await conn.execute(
           `SELECT id, name, sortOrder FROM imported_menu_categories WHERE sessionId=? ORDER BY sortOrder`,
@@ -525,7 +526,7 @@ export const menuImportRouter = router({
   deleteSession: protectedProcedure
     .input(z.object({ sessionId: z.number() }))
     .mutation(async ({ input }) => {
-      const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+      const conn = await getConn();
       try {
         await conn.execute(`DELETE FROM menu_import_sessions WHERE id=?`, [input.sessionId]);
         return { success: true };
@@ -1065,7 +1066,7 @@ export type AppRouter = typeof appRouter;
 // ─── App Router ───────────────────────────────────────────────────────────────
 export const deliveryPricingRouter = router({
   getPlatforms: protectedProcedure.query(async () => {
-    const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+    const conn = await getConn();
     try {
       const [rows] = await conn.query<any[]>(`SELECT * FROM delivery_platform_settings WHERE isActive=1 ORDER BY id`);
       return rows as any[];
@@ -1081,7 +1082,7 @@ export const deliveryPricingRouter = router({
       deliveryFee: z.number().min(0),
     }))
     .mutation(async ({ input }) => {
-      const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+      const conn = await getConn();
       try {
         await conn.execute(
           `UPDATE delivery_platform_settings SET markupRate=?, commissionRate=?, discountRate=?, deliveryFee=? WHERE id=?`,
@@ -1092,7 +1093,7 @@ export const deliveryPricingRouter = router({
     }),
 
   getProducts: protectedProcedure.query(async () => {
-    const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+    const conn = await getConn();
     try {
       const [rows] = await conn.query<any[]>(
         `SELECT id, name, nameAr, price, categoryReference FROM products WHERE isActive=1 AND price > 0 ORDER BY categoryReference, name`
@@ -3542,7 +3543,7 @@ export const appRouter = router({
   // ─── WhatsApp Scheduled Reports ──────────────────────────────────────────────
   whatsapp: router({
     getSettings: protectedProcedure.query(async () => {
-      const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+      const conn = await getConn();
       try {
         const [rows] = await conn.execute("SELECT id, evolutionApiUrl, evolutionInstance, isConfigured, updatedAt FROM whatsapp_settings LIMIT 1");
         return (rows as any[])[0] ?? null;
@@ -3555,7 +3556,7 @@ export const appRouter = router({
         evolutionInstance: z.string().min(1),
       }))
       .mutation(async ({ input }) => {
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           const [existing] = await conn.execute("SELECT id FROM whatsapp_settings LIMIT 1");
           if ((existing as any[]).length) {
@@ -3573,7 +3574,7 @@ export const appRouter = router({
         } finally { await conn.end(); }
       }),
     testConnection: protectedProcedure.mutation(async () => {
-      const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+      const conn = await getConn();
       try {
         const [rows] = await conn.execute("SELECT * FROM whatsapp_settings WHERE isConfigured=1 LIMIT 1");
         const s = (rows as any[])[0];
@@ -3582,7 +3583,7 @@ export const appRouter = router({
       } finally { await conn.end(); }
     }),
     listSubscriptions: protectedProcedure.query(async () => {
-      const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+      const conn = await getConn();
       try {
         const [subs] = await conn.execute("SELECT * FROM report_subscriptions ORDER BY createdAt DESC");
         const subList = subs as any[];
@@ -3606,7 +3607,7 @@ export const appRouter = router({
         recipients: z.array(z.object({ phoneNumber: z.string().min(5), name: z.string().optional() })).min(1),
       }))
       .mutation(async ({ input, ctx }) => {
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           const [result] = await conn.execute(
             "INSERT INTO report_subscriptions (name, reportType, templateId, scheduleType, scheduleHour, scheduleDay, scheduleEveryHours, messageTemplate, createdBy) VALUES (?,?,?,?,?,?,?,?,?)",
@@ -3633,7 +3634,7 @@ export const appRouter = router({
         messageTemplate: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           const { id, ...fields } = input;
           const entries = Object.entries(fields).filter(([, v]) => v !== undefined);
@@ -3646,7 +3647,7 @@ export const appRouter = router({
     deleteSubscription: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           await conn.execute("DELETE FROM report_subscriptions WHERE id=?", [input.id]);
           return { success: true };
@@ -3661,7 +3662,7 @@ export const appRouter = router({
         templateId: z.number().optional(),
       }))
       .query(async ({ input }) => {
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           // Try to get template by id first, then by reportType
           let tmplRow: any = null;
@@ -3727,7 +3728,7 @@ export const appRouter = router({
     getLogs: protectedProcedure
       .input(z.object({ subscriptionId: z.number().optional(), limit: z.number().default(50) }))
       .query(async ({ input }) => {
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           const limitVal = parseInt(String(input.limit), 10) || 50;
           let q = `SELECT l.id, l.subscriptionId, l.status, l.recipientPhone, l.messageContent, l.errorMessage, l.retryCount,
@@ -3743,7 +3744,7 @@ export const appRouter = router({
       }),
     getTemplates: protectedProcedure
       .query(async () => {
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           const [rows] = await conn.query('SELECT * FROM report_templates ORDER BY updatedAt DESC');
           return rows as any[];
@@ -3759,7 +3760,7 @@ export const appRouter = router({
         id: z.number().optional(), // if provided, update existing
       }))
       .mutation(async ({ input }) => {
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           if (input.id) {
             await conn.execute(
@@ -3780,7 +3781,7 @@ export const appRouter = router({
     deleteTemplate: protectedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           await conn.execute('DELETE FROM report_templates WHERE id=?', [input.id]);
           return { success: true };
@@ -3797,7 +3798,7 @@ export const appRouter = router({
         includeDate: z.boolean().default(true),
       }))
       .mutation(async ({ input }) => {
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           // Build full_text from header + body + footer
           const parts = [];
@@ -3818,7 +3819,7 @@ export const appRouter = router({
         reportType: z.enum(['daily_sales','orders_summary','kitchen_cost','inventory_value','waste_summary','system_alerts','warehouse_performance']),
       }))
       .mutation(async ({ input }) => {
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           await conn.execute('DELETE FROM report_templates WHERE reportType=?', [input.reportType]);
           return { success: true };
@@ -3827,7 +3828,7 @@ export const appRouter = router({
 
     deleteAllTemplates: protectedProcedure
       .mutation(async () => {
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           await conn.execute('DELETE FROM report_templates');
           return { success: true };
@@ -3842,7 +3843,7 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const { invokeLLM } = await import("./_core/llm");
         const { getBusinessDayTzOffset } = await import("./db");
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         const tzOffset = await getBusinessDayTzOffset();
         // Compute business day date: before 06:00 local time = yesterday
         const sign = tzOffset[0] === '-' ? -1 : 1;
@@ -4373,7 +4374,7 @@ ${statsContext}
         // إرسال رسالة واتساب فورية (fire-and-forget)
         // جلب carry_from_prev من قاعدة البيانات (carryForwardToNext لليوم السابق)
         const fetchPrevCarry = async (): Promise<number> => {
-          const conn2 = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+          const conn2 = await getConn();
           try {
             const [rows] = await conn2.query<any[]>(
               `SELECT carryForwardToNext FROM daily_accounts WHERE accountDate < ? ORDER BY accountDate DESC LIMIT 1`,
@@ -4384,7 +4385,7 @@ ${statsContext}
         };
         fetchPrevCarry().then(async (prevCarry) => {
           // جلب كل بيانات اليوم من DB مباشرة لضمان الدقة
-          const conn3 = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+          const conn3 = await getConn();
           let staffMeals = 0, foodCostPercent = 0;
           let expensesSupplierInvoices = input.expensesSupplierInvoices ?? 0;
           let expensesFreeInvoices = input.expensesFreeInvoices ?? 0;
@@ -4420,7 +4421,7 @@ ${statsContext}
           // حساب نسبة المطعم للشهر
           const [yr, mo] = input.accountDate.split('-').map(Number);
           const monthStart = `${yr}-${String(mo).padStart(2,'0')}-01`;
-          const conn4 = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+          const conn4 = await getConn();
           let restaurantDiff: number | undefined;
           try {
             const [mRows] = await conn4.execute(
@@ -4492,7 +4493,7 @@ ${statsContext}
         reason: z.string().min(1, "السبب مطلوب"),
       }))
       .mutation(async ({ input }) => {
-        const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           await conn.execute(
             `UPDATE daily_accounts SET carryForwardToNext=?, carryForwardEditReason=? WHERE id=?`,
@@ -4525,7 +4526,7 @@ ${statsContext}
       .query(({ input }) => getFinancialKpi(input.year, input.month)),
 
     getOpeningStock: protectedProcedure.query(async () => {
-      const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+      const conn = await getConn();
       try {
         const [rows] = await conn.query<any[]>(`SELECT openingStockValue, openingStockDate FROM app_settings WHERE id=1`);
         const r = (rows as any[])[0];
@@ -4553,7 +4554,7 @@ ${statsContext}
       .mutation(async ({ input }) => {
         // لو في year/month → حدّث openingStockValue في snapshot الشهر ده
         if (input.year && input.month) {
-          const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+          const conn = await getConn();
           try {
             const [existing] = await conn.query<any[]>(
               `SELECT id FROM monthly_stock_snapshots WHERE year=? AND month=?`, [input.year, input.month]
@@ -4579,7 +4580,7 @@ ${statsContext}
     resendReport: protectedProcedure
       .input(z.object({ accountDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) }))
       .mutation(async ({ input }) => {
-        const conn = await mysql.createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           const [rows] = await conn.execute<any[]>(
             'SELECT * FROM daily_accounts WHERE accountDate = ? LIMIT 1',
@@ -5141,7 +5142,7 @@ ${statsContext}
     checkConnection: protectedProcedure
       .input(z.object({ instanceId: z.number() }))
       .mutation(async ({ input }) => {
-        const conn = await import("mysql2/promise").then(m => m.default.createConnection(process.env.DATABASE_URL!));
+        const conn = await getConn();
         try {
           const [rows] = await conn.execute(
             "SELECT * FROM whatsapp_instances WHERE id = ? LIMIT 1",
@@ -5170,7 +5171,7 @@ ${statsContext}
     delete: protectedProcedure
       .input(z.object({ instanceId: z.number() }))
       .mutation(async ({ input }) => {
-        const conn = await import("mysql2/promise").then(m => m.default.createConnection(process.env.DATABASE_URL!));
+        const conn = await getConn();
         try {
           await conn.execute("UPDATE whatsapp_instances SET isActive = 0 WHERE id = ?", [input.instanceId]);
           return { ok: true };
@@ -5191,7 +5192,7 @@ ${statsContext}
     getWebhookUrl: protectedProcedure
       .input(z.object({ instanceId: z.number(), origin: z.string() }))
       .query(async ({ input }) => {
-        const conn = await import("mysql2/promise").then(m => m.default.createConnection(process.env.DATABASE_URL!));
+        const conn = await getConn();
         try {
           const [rows] = await conn.execute(
             "SELECT evolutionInstance FROM whatsapp_instances WHERE id = ? LIMIT 1",
@@ -5408,7 +5409,7 @@ ${statsContext}
         dateToMs: z.number().optional(),   // Unix ms timestamp (preferred, timezone-aware)
       }))
       .query(async ({ input }) => {
-        const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           // Date filter based on lastMessageAt (Unix ms timestamp)
           // Prefer dateFromMs/dateToMs (timezone-aware Unix ms) over date strings
@@ -5527,7 +5528,7 @@ ${statsContext}
       .input(z.object({ conversationIds: z.array(z.number()).max(100) }))
       .query(async ({ input }) => {
         if (input.conversationIds.length === 0) return {};
-        const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           const placeholders = input.conversationIds.map(() => "?").join(",");
           const [rows] = await conn.execute(
@@ -5559,7 +5560,7 @@ ${statsContext}
     getConversationDetail: protectedProcedure
       .input(z.object({ conversationId: z.number(), source: z.enum(["wa", "wh"]).optional() }))
       .query(async ({ input }) => {
-        const conn = await (await import("mysql2/promise")).createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           let conv: Record<string, unknown> | undefined;
           let messages: unknown[] = [];
@@ -5645,7 +5646,7 @@ ${statsContext}
         dateToMs: z.number().optional(),   // Unix ms timestamp (preferred, timezone-aware)
       }))
       .query(async ({ input }) => {
-        const conn = await (mysql as any).createConnection(process.env.DATABASE_URL!);
+        const conn = await getConn();
         try {
           // Build date filter based on lastMessageAt (Unix ms) via JOIN with wa_conversations
           // Prefer dateFromMs/dateToMs (timezone-aware Unix ms) over date strings

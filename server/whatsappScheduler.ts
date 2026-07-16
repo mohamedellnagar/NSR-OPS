@@ -4,16 +4,13 @@
  */
 
 import mysql from "mysql2/promise";
+import { getConn } from "./pool";
 import { sendWhatsAppText, sendWhatsAppDocument } from "./whatsapp";
 import { generateReport, generateReportFromFullText } from "./reportGenerators";
 import { generateDailyAccountPDF } from "./pdfGenerator";
 import { storagePut } from "./storage";
 
 let schedulerInterval: ReturnType<typeof setInterval> | null = null;
-
-async function getConn() {
-  return mysql.createConnection(process.env.DATABASE_URL!);
-}
 
 function shouldRunNow(sub: {
   scheduleType: string;
