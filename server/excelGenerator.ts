@@ -385,3 +385,165 @@ export async function generateInvoicesExcel(filters: {
   const buf = await wb.xlsx.writeBuffer();
   return Buffer.from(buf);
 }
+
+// ─── Daily accounts (monthly) with invoice detail sheets ──────────────────────
+export async function generateDailyAccountsExcel(
+  year: number,
+  month: number
+): Promise<Buffer> {
+  const { getDailyAccounts, getMonthExpenses } = await import("./db");
+  const accounts = await getDailyAccounts({ year, month });
+  const monthExpenses = await getMonthExpenses(year, month);
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "منصة مطعمي";
+  wb.created = new Date();
+
+  // ═══ Sheet 1: الحسابات اليومية ═══
+  const ws = wb.addWorksheet("الحسابات اليومية", {
+    views: [{ rightToLeft: true, state: "frozen", ySplit: 1 }],
+    properties: { tabColor: { argb: "FF4F46E5" } },
+  });
+  ws.columns = [
+    { key: "date", width: 13 }, { key: "carry", width: 12 },
+    { key: "cash", width: 11 }, { key: "card", width: 11 }, { key: "kita", width: 11 },
+    { key: "orders", width: 11 }, { key: "careem", width: 11 }, { key: "deliveroo", width: 11 },
+    { key: "noon", width: 11 }, { key: "totalSales", width: 14 },
+    { key: "op", width: 13 }, { key: "maint", width: 13 }, { key: "fixed", width: 12 }, { key: "totalExp", width: 14 },
+    { key: "supRest", width: 13 }, { key: "supMgmt", width: 13 }, { key: "supExtra", width: 12 }, { key: "supTotal", width: 14 },
+    { key: "net", width: 14 }, { key: "staff", width: 12 }, { key: "foodCost", width: 12 },
+  ];
+  const header = ws.addRow([
+    "التاريخ", "المرحّل",
+    "نقدي", "بطاقة", "كيتا", "طلبات", "كريم", "ديلفروا", "نون", "إجمالي المبيعات",
+    "مصروفات تشغيلية", "معدات وصيانة", "ثابتة", "إجمالي المصروفات",
+    "توريد للمطعم", "توريد للإدارة", "توريد إضافي", "إجمالي التوريدات",
+    "الصافي", "أكل الأصناف", "% فود كوست",
+  ]);
+  applyHeaderStyle(header, "FF4F46E5");
+
+  type DailyRow = { date: string; vals: (number | string)[] };
+  const dailyRows: DailyRow[] = [];
+
+  for (const a of accounts as any[]) {
+    const exp = monthExpenses[a.accountDate];
+    const hasManual = num(a.expensesOperational) > 0 || num(a.expensesMaintenance) > 0;
+    const operational = hasManual ? num(a.expensesOperational) : (exp?.operational ?? 0) + (exp?.supplierTotal ?? 0);
+    const maintenance = hasManual ? num(a.expensesMaintenance) : exp?.maintenance ?? 0;
+    const fixed = num(a.expensesFixed);
+    const totalExp = operational + maintenance + fixed;
+    const supRest = num(a.supplyToRestaurant), supMgmt = num(a.supplyToManagement), supExtra = num(a.supplyExtra);
+    const supTotal = supRest + supMgmt + supExtra;
+    const net = num(a.totalSales) - totalExp;
+    const pct = a.foodCostPercent != null ? num(a.foodCostPercent) : "";
+    dailyRows.push({ date: a.accountDate, vals: [
+      formatDate(a.accountDate), num(a.carryForwardToNext),
+      num(a.salesCash), num(a.salesCard), num(a.salesKita), num(a.salesOrders),
+      num(a.salesCareem), num(a.salesDeliveroo), num(a.salesNoon), num(a.totalSales),
+      operational, maintenance, fixed, totalExp,
+      supRest, supMgmt, supExtra, supTotal,
+      net, num(a.staffMeals), pct,
+    ]});
+  }
+
+  // Expense-only days (paid invoices, no sales entry)
+  const accountDates = new Set((accounts as any[]).map((a) => a.accountDate));
+  for (const [dateKey, exp] of Object.entries(monthExpenses)) {
+    if (accountDates.has(dateKey)) continue;
+    if ((exp.totalExpenses ?? 0) === 0) continue;
+    const operational = (exp.operational ?? 0) + (exp.supplierTotal ?? 0);
+    dailyRows.push({ date: dateKey, vals: [
+      formatDate(dateKey), 0,
+      0, 0, 0, 0, 0, 0, 0, 0,
+      operational, exp.maintenance ?? 0, 0, exp.totalExpenses,
+      0, 0, 0, 0,
+      -exp.totalExpenses, 0, "",
+    ]});
+  }
+
+  dailyRows.sort((a, b) => a.date.localeCompare(b.date));
+  let di = 0;
+  for (const dr of dailyRows) {
+    const r = ws.addRow(dr.vals);
+    r.eachCell((c) => applyDataStyle(c, di % 2 === 1));
+    di++;
+  }
+
+  // Totals row
+  const sumCol = (idx: number) => dailyRows.reduce((s, r) => s + (typeof r.vals[idx] === "number" ? (r.vals[idx] as number) : 0), 0);
+  ws.addRow([]);
+  const totalRow = ws.addRow([
+    "الإجمالي", sumCol(1),
+    sumCol(2), sumCol(3), sumCol(4), sumCol(5), sumCol(6), sumCol(7), sumCol(8), sumCol(9),
+    sumCol(10), sumCol(11), sumCol(12), sumCol(13),
+    sumCol(14), sumCol(15), sumCol(16), sumCol(17),
+    sumCol(18), sumCol(19), "",
+  ]);
+  totalRow.eachCell((cell) => {
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFEDE9FE" } };
+    cell.font = { bold: true, size: 11 };
+    cell.alignment = { horizontal: "center", vertical: "middle" };
+    cell.border = { top: { style: "medium" }, bottom: { style: "medium" } };
+  });
+  totalRow.height = 24;
+
+  // ═══ Sheets 2 & 3: تفاصيل الفواتير (للشهر) ═══
+  const lastDay = new Date(year, month, 0).getDate();
+  const dateFrom = `${year}-${String(month).padStart(2, "0")}-01`;
+  const dateTo = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+  const { allInvoices, allFreeInvoices } = await fetchWithRetry(async (conn) => {
+    const [invoicesRows] = await conn.execute<import("mysql2").RowDataPacket[]>(
+      `SELECT invoiceNumber, supplierName, invoiceDate, totalAmount, paymentStatus, paidAmount, remainingAmount, paidAt, notes FROM invoices WHERE invoiceDate >= ? AND invoiceDate <= ? ORDER BY invoiceDate DESC`,
+      [dateFrom, dateTo + " 23:59:59"]
+    );
+    const [freeRows] = await conn.execute<import("mysql2").RowDataPacket[]>(
+      `SELECT invoiceNumber, supplierName, supplierType, date, expenseCategory, totalAmount, paymentStatus, paidAmount, remainingAmount, paidAt, notes FROM free_invoices WHERE date >= ? AND date <= ? ORDER BY date DESC`,
+      [dateFrom, dateTo + " 23:59:59"]
+    );
+    return { allInvoices: invoicesRows, allFreeInvoices: freeRows };
+  });
+
+  const wsSupplier = wb.addWorksheet("فواتير الموردين", {
+    views: [{ rightToLeft: true }], properties: { tabColor: { argb: "FF1E40AF" } },
+  });
+  wsSupplier.columns = [
+    { width: 20 }, { width: 26 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 20 }, { width: 28 },
+  ];
+  const supHeader = wsSupplier.addRow(["رقم الفاتورة", "المورد", "تاريخ الفاتورة", "الإجمالي", "المدفوع", "المتبقي", "حالة الدفع", "تاريخ الدفع", "ملاحظات"]);
+  applyHeaderStyle(supHeader, "FF1E40AF");
+  let si = 0;
+  for (const inv of allInvoices) {
+    const remaining = num(inv.remainingAmount) > 0 ? num(inv.remainingAmount) : num(inv.totalAmount) - num(inv.paidAmount);
+    const r = wsSupplier.addRow([
+      inv.invoiceNumber ?? "", inv.supplierName ?? "", formatDate(inv.invoiceDate),
+      num(inv.totalAmount), num(inv.paidAmount), remaining > 0 ? remaining : 0,
+      statusLabel(inv.paymentStatus), formatDateTime(inv.paidAt), inv.notes ?? "",
+    ]);
+    r.eachCell((c) => applyDataStyle(c, si % 2 === 1));
+    si++;
+  }
+
+  const wsFree = wb.addWorksheet("الفواتير الحرة", {
+    views: [{ rightToLeft: true }], properties: { tabColor: { argb: "FF065F46" } },
+  });
+  wsFree.columns = [
+    { width: 20 }, { width: 26 }, { width: 14 }, { width: 16 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 20 }, { width: 28 },
+  ];
+  const frHeader = wsFree.addRow(["رقم الفاتورة", "المورد / الجهة", "تاريخ الفاتورة", "تصنيف المصروف", "الإجمالي", "المدفوع", "المتبقي", "حالة الدفع", "تاريخ الدفع", "ملاحظات"]);
+  applyHeaderStyle(frHeader, "FF065F46");
+  let fi = 0;
+  for (const inv of allFreeInvoices) {
+    const remaining = num(inv.remainingAmount) > 0 ? num(inv.remainingAmount) : num(inv.totalAmount) - num(inv.paidAmount);
+    const r = wsFree.addRow([
+      inv.invoiceNumber ?? "", inv.supplierName ?? "", formatDate(inv.date),
+      expenseCategoryLabel(inv.expenseCategory), num(inv.totalAmount), num(inv.paidAmount),
+      remaining > 0 ? remaining : 0, statusLabel(inv.paymentStatus), formatDateTime(inv.paidAt), inv.notes ?? "",
+    ]);
+    r.eachCell((c) => applyDataStyle(c, fi % 2 === 1));
+    fi++;
+  }
+
+  const buf = await wb.xlsx.writeBuffer();
+  return Buffer.from(buf);
+}

@@ -156,6 +156,27 @@ async function startServer() {
     }
   });
 
+  // Excel export: daily accounts for a month + invoice detail sheets
+  app.get("/api/excel/daily-accounts", async (req, res) => {
+    try {
+      const { generateDailyAccountsExcel } = await import("../excelGenerator");
+      const year = parseInt(String((req.query as Record<string, string>).year), 10);
+      const month = parseInt(String((req.query as Record<string, string>).month), 10);
+      if (!year || !month || month < 1 || month > 12) {
+        res.status(400).json({ error: "year and month (1-12) are required" });
+        return;
+      }
+      const excelBuffer = await generateDailyAccountsExcel(year, month);
+      const filename = `daily-accounts-${year}-${String(month).padStart(2, "0")}.xlsx`;
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(excelBuffer);
+    } catch (err) {
+      console.error("Daily accounts Excel generation error:", err);
+      res.status(500).json({ error: "Failed to generate Excel" });
+    }
+  });
+
   // PDF export endpoint for semi-finished materials
   app.get("/api/pdf/semi-finished", async (_req, res) => {
     try {

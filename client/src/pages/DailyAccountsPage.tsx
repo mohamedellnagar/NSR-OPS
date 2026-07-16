@@ -456,6 +456,18 @@ export default function DailyAccountsPage() {
             <Download className="w-4 h-4" />
             تصدير CSV
           </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              window.location.href = `/api/excel/daily-accounts?year=${selectedYear}&month=${selectedMonth}`;
+            }}
+            disabled={accounts.length === 0 && expenseOnlyDays.length === 0}
+            className="gap-2"
+            title="تصدير ملف Excel يحتوي على جدول الحسابات + شيتات تفاصيل الفواتير"
+          >
+            <Download className="w-4 h-4" />
+            Excel + الفواتير
+          </Button>
           <Button onClick={openAddDialog} className="gap-2">
             <Plus className="w-4 h-4" />
             إضافة يوم جديد
