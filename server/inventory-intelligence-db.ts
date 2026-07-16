@@ -126,7 +126,7 @@ export async function getDaysOfStock(): Promise<DaysOfStockItem[]> {
       };
     });
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -229,6 +229,6 @@ export async function generateSmartOrderSheet(coverDays: number = COVER_DAYS): P
       bySupplier,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

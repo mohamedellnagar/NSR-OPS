@@ -369,7 +369,7 @@ export async function getInstanceByName(
     );
     return (synced as WaInstance[])[0] ?? null;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -381,7 +381,7 @@ export async function listInstances(): Promise<WaInstance[]> {
     );
     return rows as WaInstance[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -416,7 +416,7 @@ export async function createInstance(data: {
     );
     return (result as { insertId: number }).insertId;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -436,7 +436,7 @@ export async function updateInstanceStatus(
       [status, now, connected ? 1 : 0, now, now, instanceId]
     );
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -796,7 +796,7 @@ export async function handleMessageUpsert(
     }
     return { success: false, logId, action: "error", error };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -859,7 +859,7 @@ export async function handleMessageUpdate(
     }
     return { success: false, logId, action: "error", error };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -901,7 +901,7 @@ export async function handleConnectionUpdate(
     }
     return { success: false, logId, action: "error", error };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -965,7 +965,7 @@ export async function processWebhookEvent(
   try {
     await logWebhookRaw(conn, instance.id, eventType, payload, "skipped");
   } finally {
-    await conn.end();
+    await conn.release();
   }
   return { success: true, logId: null, action: "skipped" };
 }

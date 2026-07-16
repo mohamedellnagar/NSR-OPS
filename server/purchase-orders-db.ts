@@ -111,7 +111,7 @@ export async function listPurchaseOrders(filters?: {
       })),
     }));
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -155,7 +155,7 @@ export async function getPurchaseOrderById(id: number): Promise<POWithItems | nu
       })),
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -213,7 +213,7 @@ export async function createPurchaseOrder(data: {
 
     return { id: orderId, orderNumber };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -233,7 +233,7 @@ export async function updatePurchaseOrderStatus(
       [status, id]
     );
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -242,7 +242,7 @@ export async function deletePurchaseOrder(id: number): Promise<void> {
   try {
     await conn.execute(`DELETE FROM purchase_orders WHERE id = ?`, [id]);
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -290,7 +290,7 @@ export async function sendPurchaseOrderToSupplier(
         };
       }
     } finally {
-      await conn.end();
+      await conn.release();
     }
     if (!evoConfig) throw new Error("Evolution settings not found");
     const result = await sendWhatsAppText(evoConfig, phone, message);
@@ -375,6 +375,6 @@ export async function autoGeneratePOsForLowStock(createdBy: number): Promise<{
       orders: createdOrders,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

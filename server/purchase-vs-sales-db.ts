@@ -307,6 +307,6 @@ export async function getPurchaseVsSalesAnalysis(
 
     return { totalPurchasedCost, totalExpectedCost, totalDiffCost, rows };
   } finally {
-    conn.end();
+    conn.release();
   }
 }

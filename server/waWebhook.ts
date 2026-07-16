@@ -222,7 +222,7 @@ export async function handleWaWebhook(req: Request, res: Response): Promise<void
         }, 5000);
       }
     } finally {
-      await conn.end();
+      await conn.release();
     }
   } catch (err) {
     console.error("[WA-Webhook] Error:", err);

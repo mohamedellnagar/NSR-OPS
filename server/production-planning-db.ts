@@ -234,7 +234,7 @@ export async function calcProductionRequirements(
       allFeasible: feasibilityList.every((f) => f.canFullyProduce),
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 

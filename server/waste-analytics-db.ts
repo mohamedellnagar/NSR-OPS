@@ -263,6 +263,6 @@ export async function getWasteAnalytics(
       recommendations,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

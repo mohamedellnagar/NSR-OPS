@@ -227,6 +227,6 @@ export async function getDailyFlash(date: string): Promise<DailyFlashReport> {
       alerts,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

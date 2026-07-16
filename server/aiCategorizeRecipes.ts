@@ -184,6 +184,6 @@ export async function autoCategorizeProducts(opts?: {
       durationMs: Date.now() - startedAt,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

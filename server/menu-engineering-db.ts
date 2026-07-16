@@ -237,6 +237,6 @@ export async function getMenuEngineeringAnalysis(
       totalProfit: parseFloat(totalProfit.toFixed(2)),
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

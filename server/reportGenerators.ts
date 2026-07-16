@@ -524,7 +524,7 @@ async function resolveVariables(
     } catch (_) { /* ignore if tables not available */ }
 
   } finally {
-    await conn.end();
+    await conn.release();
   }
 
   // Add report_date and common aliases so AI-generated templates work regardless of naming
@@ -733,7 +733,7 @@ async function buildDailySalesBody(date: string): Promise<string> {
 
     return body;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -800,7 +800,7 @@ async function buildOrdersSummaryBody(date: string): Promise<string> {
 
     return body;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -855,7 +855,7 @@ async function buildKitchenCostBody(date: string): Promise<string> {
 
     return body;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -916,7 +916,7 @@ async function buildInventoryValueBody(): Promise<string> {
 
     return body;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -992,7 +992,7 @@ async function buildWasteSummaryBody(date: string): Promise<string> {
 
     return body;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -1048,7 +1048,7 @@ async function buildSystemAlertsBody(): Promise<string> {
 
     return body;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 

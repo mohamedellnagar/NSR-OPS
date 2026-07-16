@@ -89,7 +89,7 @@ export async function getMessageVolume(f: WaAnalyticsFilter): Promise<MessageVol
       totalMessages: Number(r.totalMessages ?? 0),
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -148,7 +148,7 @@ export async function getAvgFirstResponseTime(f: WaAnalyticsFilter): Promise<Fir
       sampleSize: Number(r.sampleSize ?? 0),
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -191,7 +191,7 @@ export async function getConvsByStatus(f: WaAnalyticsFilter): Promise<ConvStatus
       unresolved: open,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -231,7 +231,7 @@ export async function getComplaintStats(f: WaAnalyticsFilter): Promise<Complaint
       criticalCount:  Number(r.criticalCount  ?? 0),
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -276,7 +276,7 @@ export async function getTopIntents(f: WaAnalyticsFilter, limit = 8): Promise<In
       .slice(0, limit)
       .map(([intent, count]) => ({ intent, count }));
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -319,7 +319,7 @@ export async function getSentimentDistribution(f: WaAnalyticsFilter): Promise<Se
       total:    Number(r.total    ?? 0),
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -359,7 +359,7 @@ export async function getBusiestHours(f: WaAnalyticsFilter): Promise<HourlyVolum
     }
     return Array.from({ length: 24 }, (_, h) => map.get(h) ?? { hour: h, inbound: 0, outbound: 0, total: 0 });
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -445,7 +445,7 @@ export async function getInstanceBreakdown(f: WaAnalyticsFilter): Promise<Instan
       unresolvedConvs:    Number(r.unresolvedConvs    ?? 0),
     }));
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -481,7 +481,7 @@ export async function getDailyVolume(f: WaAnalyticsFilter): Promise<DailyVolume[
       total:    Number(r.total    ?? 0),
     }));
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 

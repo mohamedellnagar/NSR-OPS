@@ -286,6 +286,6 @@ export async function enhanceMaterialsWithAI(
       durationMs: Date.now() - startedAt,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

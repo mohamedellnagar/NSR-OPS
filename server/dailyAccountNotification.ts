@@ -470,6 +470,6 @@ export async function sendDailyAccountNotification(
   } catch (err) {
     console.error("[DailyAccountNotif] Unexpected error:", err);
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

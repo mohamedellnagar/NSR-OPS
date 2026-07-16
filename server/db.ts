@@ -3760,7 +3760,7 @@ export async function getAnalyticsSummary() {
       sales: salesStats,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -3783,7 +3783,7 @@ export async function getTopConsumedMaterials(days = 30, limit = 10) {
     `) as any;
     return rows as any[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -3804,7 +3804,7 @@ export async function getDailyInventoryFlow(days = 14) {
     `) as any;
     return rows as any[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -3826,7 +3826,7 @@ export async function getSupplierSpendAnalysis() {
     `) as any;
     return rows as any[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -3847,7 +3847,7 @@ export async function getKitchenProductionTrend(days = 7) {
     `) as any;
     return rows as any[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -3882,7 +3882,7 @@ export async function getCriticalStockMaterials(limit = 15) {
     `) as any;
     return rows as any[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -3903,7 +3903,7 @@ export async function getMonthlyPurchaseTrend(months = 6) {
     `) as any;
     return rows as any[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -3928,7 +3928,7 @@ export async function getTopProducedSemiFinished(days = 30, limit = 8) {
     `) as any;
     return rows as any[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -4268,7 +4268,7 @@ export async function getAnalyticsProfitLoss(filter?: { startDate?: string; endD
       weeklyTrend,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -4406,7 +4406,7 @@ export async function getAnalyticsCOGS(filter?: { startDate?: string; endDate?: 
       capitalLockedPct,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -4869,7 +4869,7 @@ export async function getMonthlyDailyPerformance(): Promise<{
 
     return result;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -4947,7 +4947,7 @@ export async function getWeeklyTrend(): Promise<{
 
     return result;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -5365,7 +5365,7 @@ export async function getTodayDashboard() {
       },
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -5556,7 +5556,7 @@ async function _calcDailyCogsCumulative(
 
     return result;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -5812,7 +5812,7 @@ export async function getFreeInvoiceExpensesForDate(accountDate: string) {
       [freeItemRows] = await conn.execute<any[]>(
         `SELECT invoiceId, description, qty, unitPrice, total FROM free_invoice_items WHERE invoiceId IN (${allFreeIds.join(',')}) ORDER BY id`,
       );
-    } catch { freeItemRows = []; } finally { await conn.end(); }
+    } catch { freeItemRows = []; } finally { await conn.release(); }
     for (const row of (freeItemRows as any[])) {
       if (!freeItemsMap[row.invoiceId]) freeItemsMap[row.invoiceId] = [];
       freeItemsMap[row.invoiceId].push({ description: row.description, qty: parseFloat(row.qty), unitPrice: parseFloat(row.unitPrice), total: parseFloat(row.total) });
@@ -5827,7 +5827,7 @@ export async function getFreeInvoiceExpensesForDate(accountDate: string) {
       [suppItemRows] = await conn.execute<any[]>(
         `SELECT invoiceId, materialName AS description, quantity AS qty, unitPrice, totalPrice AS total FROM invoice_items WHERE invoiceId IN (${allSupplierIds.join(',')}) ORDER BY id`,
       );
-    } catch { suppItemRows = []; } finally { await conn.end(); }
+    } catch { suppItemRows = []; } finally { await conn.release(); }
     for (const row of (suppItemRows as any[])) {
       if (!supplierItemsMap[row.invoiceId]) supplierItemsMap[row.invoiceId] = [];
       supplierItemsMap[row.invoiceId].push({ description: row.description, qty: parseFloat(row.qty), unitPrice: parseFloat(row.unitPrice), total: parseFloat(row.total) });
@@ -5907,7 +5907,7 @@ export async function getPreviousDayCarryForward(accountDate: string): Promise<n
     );
     priorDays = rows as any[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 
   let running = anchor;
@@ -6042,7 +6042,7 @@ export async function getMonthExpenses(
       result[key].supplierTotal += parseFloat(r.totalAmount) || 0;
     }
   } finally {
-    await conn.end();
+    await conn.release();
   }
 
   // Compute totalExpenses (free + supplier; fixed costs are added per-day in frontend)
@@ -6104,7 +6104,7 @@ export async function getKitchenPullsByRange(fromDate: string, toDate: string) {
     );
     return enriched;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -6238,7 +6238,7 @@ export async function getAllInvoicesUnified(filters?: {
       stockUpdated: r.stockUpdated as boolean | null,
     }));
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -6260,7 +6260,7 @@ export async function getInvoiceItemNames(): Promise<string[]> {
     (freeItems as any[]).forEach((r: any) => allNames.add(r.name));
     return Array.from(allNames).sort((a, b) => a.localeCompare(b, 'ar'));
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -6591,7 +6591,7 @@ export async function getFinancialKpi(year: number, month: number) {
       liveManufacturedValue,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -6646,7 +6646,7 @@ export async function closeMonth(year: number, month: number, createdBy: number 
 
     return { success: true, rawMaterialsValue, butcherValue, manufacturedValue: semiFinishedValue, totalValue, supplierDebt, freeDebt, totalDebt, snapshotDate };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -6659,7 +6659,7 @@ export async function updateOpeningStock(openingStockValue: number, openingStock
     );
     return { success: true };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -6830,7 +6830,7 @@ export async function getMaterialPriceHistory(params: {
       })),
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -7003,7 +7003,7 @@ export async function getDailySalesForMonth(monthKey: string): Promise<{
       sales: parseFloat(r.dailySales) || 0,
     }));
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -7048,7 +7048,7 @@ export async function getMonthlySalesChart(): Promise<{
 
     return result;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 

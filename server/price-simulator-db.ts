@@ -197,7 +197,7 @@ export async function simulatePriceChange(
       avgFoodCostDelta: Math.round(avgFoodCostDelta * 10) / 10,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -228,7 +228,7 @@ export async function getMaterialPriceHistory(materialId: number): Promise<Price
       qty: parseFloat(r.qty),
     }));
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -270,6 +270,6 @@ export async function getTopVolatileMaterials(limit = 10): Promise<any[]> {
       purchaseCount: parseInt(r.purchaseCount),
     }));
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

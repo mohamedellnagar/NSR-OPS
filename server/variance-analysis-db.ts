@@ -497,7 +497,7 @@ export async function getVarianceAnalysis(
       criticalThreshold,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 

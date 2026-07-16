@@ -281,6 +281,6 @@ export async function getKitchenConsumptionReport(
       hasInventoryData,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

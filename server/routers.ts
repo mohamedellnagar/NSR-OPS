@@ -483,7 +483,7 @@ export const menuImportRouter = router({
           throw err;
         }
       } finally {
-        await conn.end();
+        await conn.release();
       }
     }),
 
@@ -497,7 +497,7 @@ export const menuImportRouter = router({
       ) as [Array<Record<string, unknown>>, unknown];
       return rows;
     } finally {
-      await conn.end();
+      await conn.release();
     }
   }),
 
@@ -518,7 +518,7 @@ export const menuImportRouter = router({
         ) as [Array<Record<string, unknown>>, unknown];
         return { categories: cats, items };
       } finally {
-        await conn.end();
+        await conn.release();
       }
     }),
 
@@ -531,7 +531,7 @@ export const menuImportRouter = router({
         await conn.execute(`DELETE FROM menu_import_sessions WHERE id=?`, [input.sessionId]);
         return { success: true };
       } finally {
-        await conn.end();
+        await conn.release();
       }
     }),
 });
@@ -1070,7 +1070,7 @@ export const deliveryPricingRouter = router({
     try {
       const [rows] = await conn.query<any[]>(`SELECT * FROM delivery_platform_settings WHERE isActive=1 ORDER BY id`);
       return rows as any[];
-    } finally { await conn.end(); }
+    } finally { await conn.release(); }
   }),
 
   updatePlatform: warehouseProcedure
@@ -1089,7 +1089,7 @@ export const deliveryPricingRouter = router({
           [input.markupRate, input.commissionRate, input.discountRate, input.deliveryFee, input.id]
         );
         return { success: true };
-      } finally { await conn.end(); }
+      } finally { await conn.release(); }
     }),
 
   getProducts: protectedProcedure.query(async () => {
@@ -1110,7 +1110,7 @@ export const deliveryPricingRouter = router({
         }
       }));
       return withCost;
-    } finally { await conn.end(); }
+    } finally { await conn.release(); }
   }),
 });
 
@@ -3547,7 +3547,7 @@ export const appRouter = router({
       try {
         const [rows] = await conn.execute("SELECT id, evolutionApiUrl, evolutionInstance, isConfigured, updatedAt FROM whatsapp_settings LIMIT 1");
         return (rows as any[])[0] ?? null;
-      } finally { await conn.end(); }
+      } finally { await conn.release(); }
     }),
     saveSettings: protectedProcedure
       .input(z.object({
@@ -3571,7 +3571,7 @@ export const appRouter = router({
             );
           }
           return { success: true };
-        } finally { await conn.end(); }
+        } finally { await conn.release(); }
       }),
     testConnection: protectedProcedure.mutation(async () => {
       const conn = await getConn();
@@ -3580,7 +3580,7 @@ export const appRouter = router({
         const s = (rows as any[])[0];
         if (!s) return { connected: false, error: "لم يتم إعداد Evolution API" };
         return checkEvolutionConnection({ apiUrl: s.evolutionApiUrl, apiKey: s.evolutionApiKey, instance: s.evolutionInstance });
-      } finally { await conn.end(); }
+      } finally { await conn.release(); }
     }),
     listSubscriptions: protectedProcedure.query(async () => {
       const conn = await getConn();
@@ -3592,7 +3592,7 @@ export const appRouter = router({
           sub.recipients = recs;
         }
         return subList;
-      } finally { await conn.end(); }
+      } finally { await conn.release(); }
     }),
     createSubscription: protectedProcedure
       .input(z.object({
@@ -3618,7 +3618,7 @@ export const appRouter = router({
             await conn.execute("INSERT INTO report_recipients (subscriptionId, phoneNumber, name) VALUES (?,?,?)", [subId, r.phoneNumber, r.name??null]);
           }
           return { id: subId };
-        } finally { await conn.end(); }
+        } finally { await conn.release(); }
       }),
     updateSubscription: protectedProcedure
       .input(z.object({
@@ -3642,7 +3642,7 @@ export const appRouter = router({
           const vals = [...entries.map(([, v]) => v), id];
           if (sets) await conn.execute(`UPDATE report_subscriptions SET ${sets} WHERE id=?`, vals);
           return { success: true };
-        } finally { await conn.end(); }
+        } finally { await conn.release(); }
       }),
     deleteSubscription: protectedProcedure
       .input(z.object({ id: z.number() }))
@@ -3651,7 +3651,7 @@ export const appRouter = router({
         try {
           await conn.execute("DELETE FROM report_subscriptions WHERE id=?", [input.id]);
           return { success: true };
-        } finally { await conn.end(); }
+        } finally { await conn.release(); }
       }),
     sendNow: protectedProcedure
       .input(z.object({ id: z.number() }))
@@ -3684,7 +3684,7 @@ export const appRouter = router({
           const validTypes2 = ['daily_sales','orders_summary','kitchen_cost','inventory_value','waste_summary','system_alerts','warehouse_performance','daily_account_summary','daily_financial_summary'];
           const rt2 = validTypes2.includes(input.reportType) ? input.reportType : 'daily_sales';
           return generateReport(rt2 as any, tmplRow);
-        } finally { await conn.end(); }
+        } finally { await conn.release(); }
       }),
 
     // Preview a full-text template with real data (new model)
@@ -3740,7 +3740,7 @@ export const appRouter = router({
           q += ` ORDER BY l.createdAt DESC LIMIT ${limitVal}`;
           const [rows] = await conn.query(q, params);
           return rows as any[];
-        } finally { await conn.end(); }
+        } finally { await conn.release(); }
       }),
     getTemplates: protectedProcedure
       .query(async () => {
@@ -3748,7 +3748,7 @@ export const appRouter = router({
         try {
           const [rows] = await conn.query('SELECT * FROM report_templates ORDER BY updatedAt DESC');
           return rows as any[];
-        } finally { await conn.end(); }
+        } finally { await conn.release(); }
       }),
 
     // Save a full-text template (new model: single text field with {{variables}})
@@ -3775,7 +3775,7 @@ export const appRouter = router({
             ) as any[];
             return { success: true, id: result.insertId };
           }
-        } finally { await conn.end(); }
+        } finally { await conn.release(); }
       }),
 
     deleteTemplate: protectedProcedure
@@ -3785,7 +3785,7 @@ export const appRouter = router({
         try {
           await conn.execute('DELETE FROM report_templates WHERE id=?', [input.id]);
           return { success: true };
-        } finally { await conn.end(); }
+        } finally { await conn.release(); }
       }),
 
     // Legacy: keep for backward compatibility
@@ -3812,7 +3812,7 @@ export const appRouter = router({
             [name, input.reportType, fullText, input.headerText ?? null, input.bodyText ?? null, input.footerText ?? null, input.includeDate ? 1 : 0]
           );
           return { success: true };
-        } finally { await conn.end(); }
+        } finally { await conn.release(); }
       }),
     resetTemplate: protectedProcedure
       .input(z.object({
@@ -3823,7 +3823,7 @@ export const appRouter = router({
         try {
           await conn.execute('DELETE FROM report_templates WHERE reportType=?', [input.reportType]);
           return { success: true };
-        } finally { await conn.end(); }
+        } finally { await conn.release(); }
       }),
 
     deleteAllTemplates: protectedProcedure
@@ -3832,7 +3832,7 @@ export const appRouter = router({
         try {
           await conn.execute('DELETE FROM report_templates');
           return { success: true };
-        } finally { await conn.end(); }
+        } finally { await conn.release(); }
       }),
 
     generateTemplateWithAI: protectedProcedure
@@ -3997,7 +3997,7 @@ export const appRouter = router({
             statsContext = `تقرير أداء المخزن (${today}):\n${lines.join('\n')}`;
           }
         } finally {
-          await conn.end();
+          await conn.release();
         }
 
         const reportTypeLabels: Record<string,string> = {
@@ -4381,7 +4381,7 @@ ${statsContext}
               [input.accountDate]
             );
             return Number((rows as any[])[0]?.carryForwardToNext || 0);
-          } finally { await conn2.end(); }
+          } finally { await conn2.release(); }
         };
         fetchPrevCarry().then(async (prevCarry) => {
           // جلب كل بيانات اليوم من DB مباشرة لضمان الدقة
@@ -4416,7 +4416,7 @@ ${statsContext}
             ) as any[];
             expensesSupplierInvoices = parseFloat((invRows as any[])[0]?.opEx) || 0;
             expensesFreeInvoices = parseFloat((freeRows as any[])[0]?.opEx) || 0;
-          } finally { await conn3.end(); }
+          } finally { await conn3.release(); }
 
           // حساب نسبة المطعم للشهر
           const [yr, mo] = input.accountDate.split('-').map(Number);
@@ -4439,7 +4439,7 @@ ${statsContext}
             const expected = mTotalSales / 2 - mTotalCash;
             restaurantDiff = mTotalSupply - expected;
           } catch(_) {}
-          finally { await conn4.end(); }
+          finally { await conn4.release(); }
 
           console.log(`[DailyAccountNotif] Triggering notification for date: ${input.accountDate}`);
           return sendDailyAccountNotification({
@@ -4499,7 +4499,7 @@ ${statsContext}
             `UPDATE daily_accounts SET carryForwardToNext=?, carryForwardEditReason=? WHERE id=?`,
             [input.carryForwardToNext, input.reason, input.id]
           );
-        } finally { await conn.end(); }
+        } finally { await conn.release(); }
         return { success: true };
       }),
 
@@ -4541,7 +4541,7 @@ ${statsContext}
           dateStr = String(rawDate).split('T')[0];
         }
         return { openingStockValue: parseFloat(r?.openingStockValue ?? '0'), openingStockDate: dateStr };
-      } finally { await conn.end(); }
+      } finally { await conn.release(); }
     }),
 
     updateOpeningStock: warehouseProcedure
@@ -4568,7 +4568,7 @@ ${statsContext}
               // شهر مفتوح → احفظ في app_settings
               await updateOpeningStock(input.openingStockValue, input.openingStockDate);
             }
-          } finally { await conn.end(); }
+          } finally { await conn.release(); }
           return { success: true };
         }
         return updateOpeningStock(input.openingStockValue, input.openingStockDate);
@@ -4610,7 +4610,7 @@ ${statsContext}
           });
           return { success: true };
         } finally {
-          await conn.end();
+          await conn.release();
         }
       }),
   }),
@@ -5163,7 +5163,7 @@ ${statsContext}
           await updateInstanceStatus(input.instanceId, mappedStatus, mappedStatus === "connected");
           return { status: mappedStatus, rawState: state };
         } finally {
-          await conn.end();
+          await conn.release();
         }
       }),
 
@@ -5176,7 +5176,7 @@ ${statsContext}
           await conn.execute("UPDATE whatsapp_instances SET isActive = 0 WHERE id = ?", [input.instanceId]);
           return { ok: true };
         } finally {
-          await conn.end();
+          await conn.release();
         }
       }),
 
@@ -5203,7 +5203,7 @@ ${statsContext}
           const webhookUrl = `${input.origin}/api/webhook/whatsapp/${instance.evolutionInstance}`;
           return { webhookUrl };
         } finally {
-          await conn.end();
+          await conn.release();
         }
       }),
   }),
@@ -5520,7 +5520,7 @@ ${statsContext}
           });
           return { conversations, total: countRow.total };
         } finally {
-          await conn.end();
+          await conn.release();
         }
       }),
     /** Get analysis for multiple conversations (for inbox list sentiment badges) */
@@ -5552,7 +5552,7 @@ ${statsContext}
           }
           return result;
         } finally {
-          await conn.end();
+          await conn.release();
         }
       }),
 
@@ -5634,7 +5634,7 @@ ${statsContext}
 
           return { conversation: conv, messages, analysis: analysis ?? null, source };
         } finally {
-          await conn.end();
+          await conn.release();
         }
       }),
     getRestaurantInsights: protectedProcedure
@@ -5835,7 +5835,7 @@ ${statsContext}
             topTopics,
           };
         } finally {
-          await conn.end();
+          await conn.release();
         }
       }),
   }),

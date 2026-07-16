@@ -57,7 +57,7 @@ export async function listWaNumbers(): Promise<WaNumber[]> {
     );
     return rows as WaNumber[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -70,7 +70,7 @@ export async function getWaNumber(id: number): Promise<WaNumber | null> {
     );
     return (rows as WaNumber[])[0] ?? null;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -102,7 +102,7 @@ export async function createWaNumber(data: {
     );
     return (result as any).insertId;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -134,7 +134,7 @@ export async function updateWaNumber(
     values.push(id);
     await conn.execute(`UPDATE restaurant_wa_numbers SET ${fields.join(",")} WHERE id=?`, values);
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -143,7 +143,7 @@ export async function deleteWaNumber(id: number): Promise<void> {
   try {
     await conn.execute("DELETE FROM restaurant_wa_numbers WHERE id=?", [id]);
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -158,7 +158,7 @@ export async function updateWaNumberStatus(
       [status, Date.now(), Date.now(), id]
     );
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -304,7 +304,7 @@ export async function upsertConversation(data: {
       return (result as any).insertId;
     }
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -351,7 +351,7 @@ export async function insertWaMessage(data: {
     );
     return (result as any).insertId;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -396,7 +396,7 @@ export async function batchUpsertConversations(items: Array<{
     );
     return items.length;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -409,7 +409,7 @@ export async function listConversations(numberId: number): Promise<WaConversatio
     );
     return rows as WaConversation[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -426,7 +426,7 @@ export async function listMessages(
     );
     return rows as WaMessage[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -438,7 +438,7 @@ export async function markConversationRead(conversationId: number): Promise<void
       [Date.now(), conversationId]
     );
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -454,7 +454,7 @@ export async function getConversationByPhone(
     );
     return (rows as WaConversation[])[0] ?? null;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -672,7 +672,7 @@ export async function syncAllChatsWithMessages(
                 }
               }
             } finally {
-              await conn.end();
+              await conn.release();
             }
           } catch (aiErr: any) {
             // AI errors are non-fatal

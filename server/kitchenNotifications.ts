@@ -66,7 +66,7 @@ async function getConfigAndRecipients(reportType: "kitchen_production" | "kitche
       recipients,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -84,7 +84,7 @@ async function getTemplateText(reportType: string): Promise<string | null> {
     const r = (rows as any[])[0];
     return r?.full_text ?? null;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 

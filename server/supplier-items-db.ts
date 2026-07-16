@@ -172,6 +172,6 @@ export async function getSupplierItemsReport(
       supplierList,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

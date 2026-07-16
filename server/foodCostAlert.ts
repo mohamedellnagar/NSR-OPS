@@ -248,6 +248,6 @@ export async function checkFoodCostImpact(
   } catch (err) {
     console.error("[foodCostAlert] Error:", err);
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

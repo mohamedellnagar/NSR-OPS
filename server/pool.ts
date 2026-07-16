@@ -9,10 +9,11 @@ import mysql from "mysql2/promise";
  * ("Too many connections"). All of those call-sites now go through this single
  * pool via `getConn()`.
  *
- * Important: `getConn()` returns a *pooled* connection. In mysql2, calling
- * `conn.end()` on a pooled connection RELEASES it back to the pool (it does not
- * close the underlying socket), so existing `try { ... } finally { conn.end() }`
- * blocks keep working correctly and no longer leak connections.
+ * Important: `getConn()` returns a *pooled* connection. Always release it with
+ * `conn.release()` (NOT `conn.end()`) — `end()` on a pooled connection is
+ * deprecated in mysql2 and will, in a future version, close the underlying
+ * socket instead of returning it to the pool (which would reintroduce leaks).
+ * The pattern is: `const conn = await getConn(); try { ... } finally { conn.release(); }`
  */
 let _pool: mysql.Pool | null = null;
 
@@ -35,9 +36,8 @@ export function getPool(): mysql.Pool {
 }
 
 /**
- * Get a pooled connection. Always release it when done — the existing pattern
- * `const conn = await getConn(); try { ... } finally { await conn.end(); }`
- * releases it back to the pool.
+ * Get a pooled connection. Always release it when done:
+ * `const conn = await getConn(); try { ... } finally { conn.release(); }`
  */
 export function getConn(): Promise<mysql.PoolConnection> {
   return getPool().getConnection();

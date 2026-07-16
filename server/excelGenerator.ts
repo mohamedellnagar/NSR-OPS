@@ -96,7 +96,7 @@ async function fetchWithRetry<T>(fn: (conn: import("mysql2/promise").Connection)
   try {
     return await fn(conn);
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 

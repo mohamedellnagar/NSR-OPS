@@ -206,7 +206,7 @@ export async function sendInvoiceWhatsAppReport(data: InvoiceReportData): Promis
     ) as [any[], any];
 
     if (!settingsRows.length) {
-      await conn.end();
+      await conn.release();
       return;
     }
 
@@ -250,7 +250,7 @@ export async function sendInvoiceWhatsAppReport(data: InvoiceReportData): Promis
       recipientRows = allRecipients;
     }
 
-    await conn.end();
+    await conn.release();
 
     if (!recipientRows.length) return;
 
@@ -293,7 +293,7 @@ export async function getInvoiceTotals(): Promise<{
     "FROM (SELECT totalAmount, paymentStatus, expenseCategory FROM invoices UNION ALL SELECT totalAmount, paymentStatus, expenseCategory FROM free_invoices) combined"
   ].join(" ");
   const [rows] = await conn.execute(sql) as [any[], any];
-  await conn.end();
+  await conn.release();
   const r = rows[0];
   return {
     grandTotal: parseFloat(r.grandTotal),

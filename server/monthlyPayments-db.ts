@@ -42,7 +42,7 @@ export async function getMonthlyPayments(month: number, year: number) {
     );
     return rows as any[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -174,7 +174,7 @@ export async function getYearlySummary(year: number) {
 
     return { monthly: rows as any[], daily: enrichedDaily };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -244,7 +244,7 @@ export async function createMonthlyPayment(input: CreateMonthlyPaymentInput) {
 
     return insertedId;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -272,7 +272,7 @@ export async function updateMonthlyPayment(input: UpdateMonthlyPaymentInput) {
       values
     );
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -293,7 +293,7 @@ export async function markPaymentAsPaid(id: number, paidAmount?: number) {
       [amount, id]
     );
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -303,7 +303,7 @@ export async function deleteMonthlyPayment(id: number) {
   try {
     await conn.execute(`DELETE FROM monthly_payments WHERE id = ?`, [id]);
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -317,6 +317,6 @@ export async function deleteMonthlyPaymentsByMonth(month: number, year: number) 
     );
     return (result as any).affectedRows;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

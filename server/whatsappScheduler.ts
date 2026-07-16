@@ -90,7 +90,7 @@ async function processSubscription(sub: any, config: any): Promise<void> {
       await updateLog(conn, logId, result.success ? "sent" : "failed", result.error);
     }
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -147,7 +147,7 @@ export async function runSchedulerTick(): Promise<void> {
   } catch (err) {
     console.error("[WhatsApp Scheduler] Error:", err);
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -357,7 +357,7 @@ export async function sendReportNow(subscriptionId: number): Promise<{ success: 
       message: `تم الإرسال: ${sent} ✅، فشل: ${failed} ❌`,
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -438,7 +438,7 @@ export async function triggerEventSubscriptions(
   } catch (err) {
     console.error(`[triggerEventSubscriptions] Error for ${reportType}:`, err);
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -464,7 +464,7 @@ async function seedFoodCostAlertTemplate(): Promise<void> {
       );
       console.log('[WhatsApp Scheduler] Seeded food_cost_alert template');
     }
-    await conn.end();
+    await conn.release();
   } catch (err) {
     console.error('[WhatsApp Scheduler] Failed to seed food_cost_alert template:', err);
   }

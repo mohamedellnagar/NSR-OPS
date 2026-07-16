@@ -361,7 +361,7 @@ export async function storeMessageAnalysis(
     );
     return (res as { insertId: number }).insertId ?? null;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -425,7 +425,7 @@ export async function storeConversationAnalysis(
     );
     return (res as { insertId: number }).insertId ?? null;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -450,7 +450,7 @@ export async function hasRecentAnalysis(
     );
     return (rows as unknown[]).length > 0;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -574,7 +574,7 @@ async function _legacyAnalyzeConversation(
   } catch (err) {
     console.error(`[WA-AI] Legacy analysis failed for conversation ${conversationId}:`, err);
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -638,7 +638,7 @@ export async function runFullConversationAnalysis(
     console.error(`[WA-AI] runFullConversationAnalysis failed for conv=${conversationId}:`, err);
     return { analysisId: null, result: null, skipped: false };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -663,7 +663,7 @@ export async function getLatestAnalysis(conversationId: number) {
     if (typeof row.extractedOrderItems === "string") row.extractedOrderItems = JSON.parse(row.extractedOrderItems);
     return row;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -691,7 +691,7 @@ export async function getInstanceAnalyticsSummary(instanceId: number) {
     );
     return (rows as unknown[])[0] ?? null;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -722,7 +722,7 @@ export async function getConversationAnalyses(
       return row;
     });
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -744,7 +744,7 @@ export async function getTopIssues(instanceId: number, limit = 10) {
     );
     return rows as unknown[];
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -884,6 +884,6 @@ export async function batchAnalyzeAllConversations(options: {
     _batchProgress.lastError = err instanceof Error ? err.message : String(err);
     console.error("[WA-AI-Batch] Fatal error:", err);
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

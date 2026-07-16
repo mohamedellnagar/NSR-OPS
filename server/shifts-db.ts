@@ -72,7 +72,7 @@ export async function listShifts(fromDate: string, toDate: string): Promise<Shif
       })),
     }));
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -106,7 +106,7 @@ export async function createShift(data: {
 
     return { id: shiftId };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -145,7 +145,7 @@ export async function updateShift(
       }
     }
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -154,7 +154,7 @@ export async function deleteShift(id: number): Promise<void> {
   try {
     await conn.execute(`DELETE FROM shifts WHERE id = ?`, [id]);
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -196,6 +196,6 @@ export async function getShiftStats(fromDate: string, toDate: string): Promise<S
       coverageByDay: Array.from(dayMap.entries()).map(([date, shiftTypes]) => ({ date, shiftTypes })),
     };
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }

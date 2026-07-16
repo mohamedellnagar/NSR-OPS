@@ -56,7 +56,7 @@ async function fetchMaterialsWithRecipes() {
 
     return result;
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
 
@@ -943,6 +943,6 @@ export async function generateRecipeCostCard(productId: number): Promise<Buffer>
       doc.end();
     });
   } finally {
-    await conn.end();
+    await conn.release();
   }
 }
