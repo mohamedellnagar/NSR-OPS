@@ -48,6 +48,7 @@ import {
   X,
   ToggleLeft,
   ToggleRight,
+  Download,
 } from "lucide-react";
 import {
   Select,
@@ -244,6 +245,87 @@ export default function DailyAccountsPage() {
     setDialogOpen(true);
   }
 
+  function handleExportCsv() {
+    const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+    const esc = (v: string | number) => {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const dayName = (d: string) =>
+      new Date(d + "T12:00:00").toLocaleDateString("ar-AE", { weekday: "short" });
+
+    const headers = [
+      "التاريخ", "اليوم", "المرحّل",
+      "نقدي", "بطاقة", "كيتا", "طلبات", "كريم", "ديلفروا", "نون", "إجمالي المبيعات",
+      "مصروفات تشغيلية", "معدات وصيانة", "ثابتة", "إجمالي المصروفات",
+      "توريد للمطعم", "توريد للإدارة", "توريد إضافي", "إجمالي التوريدات",
+      "الصافي", "أكل الأصناف", "% فود كوست",
+    ];
+
+    const rows: (string | number)[][] = [];
+
+    // Days with a sales entry
+    for (const a of accounts) {
+      const exp = monthExpenses[a.accountDate];
+      const hasManual =
+        parseFloat(String(a.expensesOperational ?? 0)) > 0 ||
+        parseFloat(String(a.expensesMaintenance ?? 0)) > 0;
+      const operationalExpenses = hasManual
+        ? parseFloat(String(a.expensesOperational ?? 0)) || 0
+        : (exp?.operational ?? 0) + (exp?.supplierTotal ?? 0);
+      const maintenanceExpenses = hasManual
+        ? parseFloat(String(a.expensesMaintenance ?? 0)) || 0
+        : exp?.maintenance ?? 0;
+      const fixedExpenses = parseFloat(a.expensesFixed) || 0;
+      const totalExpensesDay = operationalExpenses + maintenanceExpenses + fixedExpenses;
+      const supplyRest = parseFloat(a.supplyToRestaurant) || 0;
+      const supplyMgmt = parseFloat(a.supplyToManagement) || 0;
+      const supplyExtra = parseFloat(a.supplyExtra) || 0;
+      const supplyTotal = supplyRest + supplyMgmt + supplyExtra;
+      const netDay = a.totalSales - totalExpensesDay;
+      const staffMeals = parseFloat(String((a as any).staffMeals ?? 0)) || 0;
+      const pct = (a as any).foodCostPercent != null ? parseFloat((a as any).foodCostPercent) : null;
+      rows.push([
+        a.accountDate, dayName(a.accountDate), round2(parseFloat(String(a.carryForwardToNext ?? 0))),
+        round2(parseFloat(a.salesCash)), round2(parseFloat(a.salesCard)), round2(parseFloat(a.salesKita)),
+        round2(parseFloat(a.salesOrders)), round2(parseFloat(a.salesCareem)), round2(parseFloat(a.salesDeliveroo)),
+        round2(parseFloat(a.salesNoon)), round2(a.totalSales),
+        round2(operationalExpenses), round2(maintenanceExpenses), round2(fixedExpenses), round2(totalExpensesDay),
+        round2(supplyRest), round2(supplyMgmt), round2(supplyExtra), round2(supplyTotal),
+        round2(netDay), round2(staffMeals), pct != null ? round2(pct) : "",
+      ]);
+    }
+
+    // Expense-only days (paid invoices but no sales entry)
+    for (const dateKey of expenseOnlyDays) {
+      const exp = monthExpenses[dateKey]!;
+      const operationalExpenses = (exp.operational ?? 0) + (exp.supplierTotal ?? 0);
+      const maintenanceExpenses = exp.maintenance ?? 0;
+      const totalExpensesDay = exp.totalExpenses;
+      rows.push([
+        dateKey, dayName(dateKey), 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        round2(operationalExpenses), round2(maintenanceExpenses), 0, round2(totalExpensesDay),
+        0, 0, 0, 0,
+        round2(-totalExpensesDay), 0, "",
+      ]);
+    }
+
+    // Sort by date
+    rows.sort((r1, r2) => String(r1[0]).localeCompare(String(r2[0])));
+
+    const csvBody = [headers, ...rows].map((r) => r.map(esc).join(",")).join("\r\n");
+    const blob = new Blob(["﻿" + csvBody], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `الحسابات-اليومية-${selectedYear}-${String(selectedMonth).padStart(2, "0")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   function openEditDialog(acc: typeof accounts[0]) {
     setEditingDate(acc.accountDate);
     // تحويل القيم الرقمية من decimal إلى string نظيف (بدون أصفار زائدة)
@@ -363,10 +445,22 @@ export default function DailyAccountsPage() {
           <h1 className="text-2xl font-bold text-foreground">الحسابات اليومية</h1>
           <p className="text-muted-foreground text-sm mt-1">تتبع المبيعات والمصروفات والتوريدات اليومية</p>
         </div>
-        <Button onClick={openAddDialog} className="gap-2">
-          <Plus className="w-4 h-4" />
-          إضافة يوم جديد
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExportCsv}
+            disabled={accounts.length === 0 && expenseOnlyDays.length === 0}
+            className="gap-2"
+            title="تصدير جدول الشهر إلى ملف CSV (يفتح في Excel)"
+          >
+            <Download className="w-4 h-4" />
+            تصدير CSV
+          </Button>
+          <Button onClick={openAddDialog} className="gap-2">
+            <Plus className="w-4 h-4" />
+            إضافة يوم جديد
+          </Button>
+        </div>
       </div>
 
       {/* Month Navigator */}
