@@ -20,9 +20,13 @@ import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   CalendarDays, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Receipt,
   Search, TrendingUp, AlertTriangle, Info, Settings2, Save, Calculator,
-  Sparkles, CheckCircle2, CalendarX, Upload,
+  Sparkles, CheckCircle2, CalendarX, Upload, Trash2,
 } from "lucide-react";
 import {
   EXPENSE_TYPES, EXPENSE_TYPE_LABELS, EXPENSE_TYPE_UNSET_LABEL,
@@ -87,6 +91,16 @@ const DRILL_LABELS: Record<DrillKey, string> = {
 type ExpenseLike = {
   expenseType: string | null;
   expenseCategoryCode: string | null;
+};
+
+/** One row of the unified expense table, as returned by monthlyAccounts.getMonth. */
+type ExpenseRow = {
+  id: number;
+  sourceType: string;
+  invoiceNumber: string | null;
+  date: string;
+  vendorName: string | null;
+  total: number;
 };
 
 /** Shape returned by monthlyAccounts.aiClassify. */
@@ -179,6 +193,7 @@ export default function MonthlyAccountsPage() {
   const [drill, setDrill] = useState<DrillKey | null>(null);
   const [showDeleteMonth, setShowDeleteMonth] = useState(false);
   const [showSalesImport, setShowSalesImport] = useState(false);
+  const [rowToDelete, setRowToDelete] = useState<ExpenseRow | null>(null);
 
   // Expense table filters — client-side, so they never affect the summary.
   const [search, setSearch] = useState("");
@@ -199,6 +214,20 @@ export default function MonthlyAccountsPage() {
   const updateClassification = trpc.monthlyAccounts.updateClassification.useMutation({
     onSuccess: () => { toast.success("تم حفظ التصنيف"); invalidate(); },
     onError: (e) => toast.error(e.message || "تعذّر حفظ التصنيف"),
+  });
+
+  const deleteRow = trpc.monthlyAccounts.deleteExpenseRow.useMutation({
+    onSuccess: (r) => {
+      toast.success(
+        r.clearedOnly ? "تم تصفير المصروف الثابت لهذا اليوم" : "تم حذف السجل"
+      );
+      if (r.stockWentNegative && r.stockWentNegative.length > 0) {
+        toast.warning(`${r.stockWentNegative.length} مادة كانت ستصبح كميتها سالبة — تم ضبطها على صفر`);
+      }
+      setRowToDelete(null);
+      invalidate();
+    },
+    onError: (e) => { toast.error(e.message || "تعذّر الحذف"); setRowToDelete(null); },
   });
 
   const saveSettings = trpc.monthlyAccounts.saveSettings.useMutation({
@@ -796,7 +825,7 @@ export default function MonthlyAccountsPage() {
                       <table className="w-full text-sm border-collapse min-w-[1200px]">
                         <thead>
                           <tr className="bg-rose-50 dark:bg-rose-950/40">
-                            {["التاريخ", "رقم الفاتورة", "المورد / الجهة", "المصدر", "البيان", "نوع المصروف", "تصنيف المصروف", "طريقة الدفع", "الإجمالي", "المدفوع", "المتبقي", "حالة الدفع"].map((h) => (
+                            {["التاريخ", "رقم الفاتورة", "المورد / الجهة", "المصدر", "البيان", "نوع المصروف", "تصنيف المصروف", "طريقة الدفع", "الإجمالي", "المدفوع", "المتبقي", "حالة الدفع", "إجراءات"].map((h) => (
                               <th key={h} className="px-2 py-2 text-center font-semibold whitespace-nowrap">{h}</th>
                             ))}
                           </tr>
@@ -912,6 +941,22 @@ export default function MonthlyAccountsPage() {
                                   <span className="block text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">يحتاج تصنيف</span>
                                 )}
                               </td>
+                              <td className="px-2 py-1.5 text-center">
+                                {canEdit && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setRowToDelete(e)}
+                                    disabled={deleteRow.isPending}
+                                    className="text-rose-600 hover:text-rose-800 dark:hover:text-rose-400 disabled:opacity-40"
+                                    title={e.sourceType === "DAILY_EXPENSE"
+                                      ? "تصفير المصروف الثابت لهذا اليوم"
+                                      : "حذف هذا السجل"}
+                                    aria-label="حذف"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -921,6 +966,7 @@ export default function MonthlyAccountsPage() {
                             <td className="px-2 py-2 text-center whitespace-nowrap">{fmt(filteredTotals.total)}</td>
                             <td className="px-2 py-2 text-center whitespace-nowrap">{fmt(filteredTotals.paid)}</td>
                             <td className="px-2 py-2 text-center whitespace-nowrap">{fmt(filteredTotals.remaining)}</td>
+                            <td className="px-2 py-2" />
                             <td className="px-2 py-2" />
                           </tr>
                         </tfoot>
@@ -933,6 +979,58 @@ export default function MonthlyAccountsPage() {
           </Collapsible>
         </>
       )}
+
+      <AlertDialog open={rowToDelete !== null} onOpenChange={(o) => !o && setRowToDelete(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {rowToDelete?.sourceType === "DAILY_EXPENSE"
+                ? "تصفير المصروف الثابت؟"
+                : "حذف هذا السجل؟"}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              {rowToDelete && (
+                <span className="block">
+                  <span className="font-semibold text-foreground">
+                    {rowToDelete.vendorName || rowToDelete.invoiceNumber || "—"}
+                  </span>
+                  {" — "}{fmt(rowToDelete.total)} {currency} — {shortDate(rowToDelete.date)}
+                </span>
+              )}
+              {rowToDelete?.sourceType === "DAILY_EXPENSE" && (
+                <span className="block text-amber-700 dark:text-amber-400">
+                  هذا ليس فاتورة، بل خانة «المصروفات الثابتة» في يوم الحسابات اليومية.
+                  سيتم تصفيرها فقط، ولن تتأثر مبيعات هذا اليوم أو أي بيانات أخرى فيه.
+                </span>
+              )}
+              {rowToDelete?.sourceType === "SUPPLIER_INVOICE" && (
+                <span className="block text-amber-700 dark:text-amber-400">
+                  فاتورة مورد — سيتم عكس كميات المخزون ومتوسط التكلفة تلقائيًا.
+                </span>
+              )}
+              <span className="block">لا يمكن التراجع عن هذه العملية.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteRow.isPending}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteRow.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (!rowToDelete) return;
+                deleteRow.mutate({
+                  source: rowToDelete.sourceType as "SUPPLIER_INVOICE" | "FREE_INVOICE" | "MONTHLY_PAYMENT" | "DAILY_EXPENSE",
+                  ...(rowToDelete.sourceType === "DAILY_EXPENSE"
+                    ? { date: rowToDelete.date }
+                    : { id: rowToDelete.id }),
+                });
+              }}
+            >
+              {deleteRow.isPending ? "جارٍ…" : (rowToDelete?.sourceType === "DAILY_EXPENSE" ? "تصفير" : "حذف")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <SalesImportDialog
         open={showSalesImport}

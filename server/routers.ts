@@ -255,7 +255,7 @@ import {
 } from "./monthly-accounts-db";
 import { classifyExpensesWithAI } from "./aiExpenseClassifier";
 import { importExpensesFromExcel, buildExpenseImportTemplate } from "./expense-import";
-import { previewMonthDeletion, deleteMonthInvoices } from "./invoice-bulk-delete";
+import { previewMonthDeletion, deleteMonthInvoices, deleteExpenseRow } from "./invoice-bulk-delete";
 import { importSalesFromExcel, buildSalesImportTemplate } from "./sales-import";
 import {
   EXPENSE_TYPES,
@@ -595,6 +595,19 @@ export const monthlyAccountsRouter = router({
       })
     )
     .query(({ input }) => getMonthlyAccountSettings(input.year, input.month)),
+
+  // Deletes one row from the monthly expenses table. Supplier invoices reverse
+  // their stock; a daily expense only has its expensesFixed figure cleared,
+  // because that row also holds the day's sales.
+  deleteExpenseRow: warehouseProcedure
+    .input(
+      z.object({
+        source: z.enum(["SUPPLIER_INVOICE", "FREE_INVOICE", "MONTHLY_PAYMENT", "DAILY_EXPENSE"]),
+        id: z.number().int().positive().optional(),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      })
+    )
+    .mutation(({ input, ctx }) => deleteExpenseRow({ ...input, userId: ctx.user.id })),
 
   // ── Bulk month deletion ──
   // Destructive and irreversible: admin only. `preview` must be shown first —

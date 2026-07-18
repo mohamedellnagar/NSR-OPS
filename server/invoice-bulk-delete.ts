@@ -64,6 +64,116 @@ export function reverseAverageCost(
   return restored;
 }
 
+
+// ─── Single invoice, with stock reversal ──────────────────────────────────────
+export interface ReversalOutcome {
+  materialsAdjusted: number;
+  averageCostSkipped: number;
+  stockWentNegative: string[];
+  reversalTransactions: number;
+}
+
+/**
+ * Deletes ONE supplier invoice and undoes its stock effects.
+ * Shared by the single-row delete and the whole-month delete so the reversal
+ * logic exists in exactly one place.
+ */
+export async function deleteSupplierInvoiceWithReversal(
+  conn: any,
+  invoice: { id: number; invoiceNumber: string; supplierId?: number | null; supplierName?: string | null },
+  userId: number,
+  note: string
+): Promise<ReversalOutcome> {
+  const out: ReversalOutcome = {
+    materialsAdjusted: 0, averageCostSkipped: 0,
+    stockWentNegative: [], reversalTransactions: 0,
+  };
+
+  const [items] = await conn.execute(
+    `SELECT id, materialId, materialName, quantity, unitPrice
+       FROM invoice_items WHERE invoiceId = ? AND materialId IS NOT NULL`,
+    [invoice.id]
+  );
+
+  for (const it of items as any[]) {
+    const qty = num(it.quantity);
+    const price = num(it.unitPrice);
+
+    const [[mat]] = (await conn.execute(
+      `SELECT currentQuantity, averageCost, name FROM raw_materials WHERE id = ?`,
+      [it.materialId]
+    )) as any;
+    if (!mat) continue;
+
+    const curQty = num(mat.currentQuantity);
+    const curAvg = num(mat.averageCost);
+    const newQty = curQty - qty;
+
+    if (newQty < 0) {
+      out.stockWentNegative.push(
+        `${mat.name ?? it.materialName}: ${curQty} \u2212 ${qty} = ${newQty.toFixed(3)}`
+      );
+    }
+
+    const restoredAvg = reverseAverageCost(curQty, curAvg, qty, price);
+    if (restoredAvg === null) out.averageCostSkipped++;
+
+    await conn.execute(
+      `UPDATE raw_materials
+          SET currentQuantity = ?, ${restoredAvg !== null ? "averageCost = ?," : ""} updatedAt = NOW()
+        WHERE id = ?`,
+      restoredAvg !== null
+        ? [Math.max(0, newQty).toFixed(3), restoredAvg.toFixed(3), it.materialId]
+        : [Math.max(0, newQty).toFixed(3), it.materialId]
+    );
+    out.materialsAdjusted++;
+
+    const [ins] = (await conn.execute(
+      `INSERT INTO inventory_transactions
+         (materialId, transactionType, quantity, unitPrice, totalAmount,
+          supplierId, supplierName, reason, movementStatus,
+          referenceNumber, referenceType, quantityBefore, quantityAfter, notes, createdBy)
+       VALUES (?, 'OUT', ?, ?, ?, ?, ?, 'return', 'posted', ?, 'invoice_deleted', ?, ?, ?, ?)`,
+      [
+        it.materialId, qty.toFixed(3), price.toFixed(3), (qty * price).toFixed(3),
+        invoice.supplierId ?? null, invoice.supplierName ?? null,
+        invoice.invoiceNumber, curQty.toFixed(3), Math.max(0, newQty).toFixed(3),
+        note, userId,
+      ]
+    )) as any;
+    out.reversalTransactions++;
+
+    await conn.execute(
+      `UPDATE inventory_transactions
+          SET movementStatus = 'reversed', reversingTransactionId = ?
+        WHERE referenceNumber = ? AND materialId = ?
+          AND transactionType = 'IN' AND movementStatus = 'posted'`,
+      [ins.insertId, invoice.invoiceNumber, it.materialId]
+    );
+  }
+
+  await conn.execute(`DELETE FROM invoices WHERE id = ?`, [invoice.id]);
+
+  // lastPurchasePrice must come from a purchase that still exists.
+  for (const it of items as any[]) {
+    const [[latest]] = (await conn.execute(
+      `SELECT ii.unitPrice FROM invoice_items ii
+         JOIN invoices i ON ii.invoiceId = i.id
+        WHERE ii.materialId = ?
+        ORDER BY i.invoiceDate DESC, i.id DESC LIMIT 1`,
+      [it.materialId]
+    )) as any;
+    if (latest) {
+      await conn.execute(
+        `UPDATE raw_materials SET lastPurchasePrice = ? WHERE id = ?`,
+        [num(latest.unitPrice).toFixed(3), it.materialId]
+      );
+    }
+  }
+
+  return out;
+}
+
 // ─── Preview ──────────────────────────────────────────────────────────────────
 export interface MonthDeletionPreview {
   year: number;
@@ -197,94 +307,15 @@ export async function deleteMonthInvoices(input: {
 
       for (const inv of invoiceRows as any[]) {
         try {
-          const [items] = await conn.execute<any[]>(
-            `SELECT id, materialId, materialName, quantity, unitPrice
-               FROM invoice_items WHERE invoiceId = ? AND materialId IS NOT NULL`,
-            [inv.id]
+          const outcome = await deleteSupplierInvoiceWithReversal(
+            conn, inv, input.userId,
+            `عكس تلقائي عند حذف فواتير شهر ${input.year}-${String(input.month).padStart(2, "0")}`
           );
-
-          for (const it of items as any[]) {
-            const qty = num(it.quantity);
-            const price = num(it.unitPrice);
-
-            const [[mat]] = (await conn.execute(
-              `SELECT currentQuantity, averageCost, name FROM raw_materials WHERE id = ?`,
-              [it.materialId]
-            )) as any;
-            if (!mat) continue;
-
-            const curQty = num(mat.currentQuantity);
-            const curAvg = num(mat.averageCost);
-            const newQty = curQty - qty;
-
-            if (newQty < 0) {
-              result.stockWentNegative.push(
-                `${mat.name ?? it.materialName}: ${curQty} − ${qty} = ${newQty.toFixed(3)}`
-              );
-            }
-
-            const restoredAvg = reverseAverageCost(curQty, curAvg, qty, price);
-            if (restoredAvg === null) result.averageCostSkipped++;
-
-            // Quantity is floored at 0: negative physical stock is never valid,
-            // and the shortfall is reported above rather than silently stored.
-            await conn.execute(
-              `UPDATE raw_materials
-                  SET currentQuantity = ?, ${restoredAvg !== null ? "averageCost = ?," : ""} updatedAt = NOW()
-                WHERE id = ?`,
-              restoredAvg !== null
-                ? [Math.max(0, newQty).toFixed(3), restoredAvg.toFixed(3), it.materialId]
-                : [Math.max(0, newQty).toFixed(3), it.materialId]
-            );
-            result.materialsAdjusted++;
-
-            // Audit: write the reversing OUT row and mark the original reversed.
-            const [ins] = (await conn.execute(
-              `INSERT INTO inventory_transactions
-                 (materialId, transactionType, quantity, unitPrice, totalAmount,
-                  supplierId, supplierName, reason, movementStatus,
-                  referenceNumber, referenceType, quantityBefore, quantityAfter,
-                  notes, createdBy)
-               VALUES (?, 'OUT', ?, ?, ?, ?, ?, 'return', 'posted', ?, 'invoice_deleted', ?, ?, ?, ?)`,
-              [
-                it.materialId, qty.toFixed(3), price.toFixed(3), (qty * price).toFixed(3),
-                inv.supplierId ?? null, inv.supplierName ?? null,
-                inv.invoiceNumber, curQty.toFixed(3), Math.max(0, newQty).toFixed(3),
-                `عكس تلقائي عند حذف فواتير شهر ${input.year}-${String(input.month).padStart(2, "0")}`,
-                input.userId,
-              ]
-            )) as any;
-            result.reversalTransactions++;
-
-            await conn.execute(
-              `UPDATE inventory_transactions
-                  SET movementStatus = 'reversed', reversingTransactionId = ?
-                WHERE referenceNumber = ? AND materialId = ?
-                  AND transactionType = 'IN' AND movementStatus = 'posted'`,
-              [ins.insertId, inv.invoiceNumber, it.materialId]
-            );
-          }
-
-          // invoice_items cascade with the invoice
-          await conn.execute(`DELETE FROM invoices WHERE id = ?`, [inv.id]);
+          result.materialsAdjusted += outcome.materialsAdjusted;
+          result.averageCostSkipped += outcome.averageCostSkipped;
+          result.stockWentNegative.push(...outcome.stockWentNegative);
+          result.reversalTransactions += outcome.reversalTransactions;
           result.deletedSupplierInvoices++;
-
-          // lastPurchasePrice must come from a purchase that still exists.
-          for (const it of items as any[]) {
-            const [[latest]] = (await conn.execute(
-              `SELECT ii.unitPrice FROM invoice_items ii
-                 JOIN invoices i ON ii.invoiceId = i.id
-                WHERE ii.materialId = ?
-                ORDER BY i.invoiceDate DESC, i.id DESC LIMIT 1`,
-              [it.materialId]
-            )) as any;
-            if (latest) {
-              await conn.execute(
-                `UPDATE raw_materials SET lastPurchasePrice = ? WHERE id = ?`,
-                [num(latest.unitPrice).toFixed(3), it.materialId]
-              );
-            }
-          }
         } catch (err) {
           result.errors.push(
             `فاتورة ${inv.invoiceNumber}: ${err instanceof Error ? err.message : String(err)}`
@@ -317,6 +348,79 @@ export async function deleteMonthInvoices(input: {
 
     result.durationMs = Date.now() - startedAt;
     return result;
+  } finally {
+    conn.release();
+  }
+}
+
+// ─── Single expense row ───────────────────────────────────────────────────────
+export type ExpenseRowSource =
+  | "SUPPLIER_INVOICE" | "FREE_INVOICE" | "MONTHLY_PAYMENT" | "DAILY_EXPENSE";
+
+export interface DeleteExpenseRowResult {
+  deleted: boolean;
+  kind: ExpenseRowSource;
+  /** Set for DAILY_EXPENSE: the row is kept, only the fixed-expense figure is cleared. */
+  clearedOnly?: boolean;
+  materialsAdjusted?: number;
+  stockWentNegative?: string[];
+}
+
+/**
+ * Deletes ONE row as shown in the monthly expenses table.
+ *
+ * DAILY_EXPENSE is special: it is not a record of its own but the
+ * `expensesFixed` figure on a daily_accounts row that ALSO holds that day's
+ * sales. Deleting the row would destroy the sales, so the figure is zeroed
+ * instead and the day is left intact.
+ */
+export async function deleteExpenseRow(input: {
+  source: ExpenseRowSource;
+  /** invoice/payment id, or the YYYY-MM-DD date for a daily expense. */
+  id?: number;
+  date?: string;
+  userId: number;
+}): Promise<DeleteExpenseRowResult> {
+  const conn = await getConn();
+  try {
+    if (input.source === "DAILY_EXPENSE") {
+      if (!input.date) throw new Error("التاريخ مطلوب لحذف المصروف اليومي");
+      const [res] = await conn.execute<any>(
+        `UPDATE daily_accounts SET expensesFixed = 0 WHERE accountDate = ?`,
+        [input.date]
+      );
+      if (res.affectedRows === 0) throw new Error("اليوم غير موجود");
+      return { deleted: true, kind: "DAILY_EXPENSE", clearedOnly: true };
+    }
+
+    if (!input.id) throw new Error("المعرّف مطلوب");
+
+    if (input.source === "SUPPLIER_INVOICE") {
+      const [[inv]] = (await conn.execute(
+        `SELECT id, invoiceNumber, supplierId, supplierName FROM invoices WHERE id = ?`,
+        [input.id]
+      )) as any;
+      if (!inv) throw new Error("الفاتورة غير موجودة");
+      const outcome = await deleteSupplierInvoiceWithReversal(
+        conn, inv, input.userId, `عكس تلقائي عند حذف الفاتورة ${inv.invoiceNumber}`
+      );
+      return {
+        deleted: true, kind: "SUPPLIER_INVOICE",
+        materialsAdjusted: outcome.materialsAdjusted,
+        stockWentNegative: outcome.stockWentNegative,
+      };
+    }
+
+    if (input.source === "FREE_INVOICE") {
+      await conn.execute(`DELETE FROM free_invoice_items WHERE invoiceId = ?`, [input.id]);
+      const [res] = await conn.execute<any>(`DELETE FROM free_invoices WHERE id = ?`, [input.id]);
+      if (res.affectedRows === 0) throw new Error("الفاتورة غير موجودة");
+      return { deleted: true, kind: "FREE_INVOICE" };
+    }
+
+    const [res] = await conn.execute<any>(`DELETE FROM monthly_payments WHERE id = ?`, [input.id]);
+    if (res.affectedRows === 0) throw new Error("الدفعة غير موجودة");
+    return { deleted: true, kind: "MONTHLY_PAYMENT" };
   } finally {
     conn.release();
   }
