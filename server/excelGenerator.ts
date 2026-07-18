@@ -42,6 +42,27 @@ function expenseCategoryLabel(c: string | null | undefined): string {
   return c ?? "";
 }
 
+function paymentCategoryLabel(c: string | null | undefined): string {
+  if (c === "salaries") return "رواتب";
+  if (c === "rent") return "إيجار";
+  if (c === "utilities") return "مرافق وخدمات";
+  if (c === "other") return "أخرى";
+  return c ?? "";
+}
+
+function paymentStatusLabel(s: string | null | undefined): string {
+  if (s === "paid") return "مدفوع";
+  if (s === "pending") return "معلق";
+  if (s === "overdue") return "متأخر";
+  return s ?? "";
+}
+
+function recurrenceLabel(r: string | null | undefined): string {
+  if (r === "monthly") return "شهري";
+  if (r === "once") return "مرة واحدة";
+  return r ?? "";
+}
+
 function supplierTypeLabel(t: string | null | undefined): string {
   if (t === "supplier") return "مورد";
   if (t === "service") return "خدمة";
@@ -543,6 +564,62 @@ export async function generateDailyAccountsExcel(
     r.eachCell((c) => applyDataStyle(c, fi % 2 === 1));
     fi++;
   }
+
+  // ═══ Sheet 4: المدفوعات الشهرية ═══
+  const { getMonthlyPayments } = await import("./monthlyPayments-db");
+  const payments = await getMonthlyPayments(month, year);
+
+  const wsPay = wb.addWorksheet("المدفوعات الشهرية", {
+    views: [{ rightToLeft: true, state: "frozen", ySplit: 1 }],
+    properties: { tabColor: { argb: "FFB45309" } },
+  });
+  wsPay.columns = [
+    { width: 28 }, { width: 16 }, { width: 14 }, { width: 14 }, { width: 14 },
+    { width: 14 }, { width: 14 }, { width: 12 }, { width: 20 }, { width: 28 },
+  ];
+  const payHeader = wsPay.addRow([
+    "البيان", "التصنيف", "الإجمالي", "المدفوع", "المتبقي",
+    "حالة الدفع", "التكرار", "يوم الاستحقاق", "تاريخ الدفع", "ملاحظات",
+  ]);
+  applyHeaderStyle(payHeader, "FFB45309");
+
+  let pi = 0;
+  let payTotal = 0, payPaid = 0;
+  for (const p of payments) {
+    const total = num(p.totalAmount);
+    const paid = num(p.paidAmount);
+    const remaining = total - paid;
+    payTotal += total;
+    payPaid += paid;
+    const r = wsPay.addRow([
+      p.name ?? "",
+      paymentCategoryLabel(p.category),
+      total,
+      paid,
+      remaining > 0 ? remaining : 0,
+      paymentStatusLabel(p.status),
+      recurrenceLabel(p.recurrence),
+      p.dueDay ?? "",
+      formatDateTime(p.paidAt),
+      p.notes ?? "",
+    ]);
+    r.eachCell((c) => applyDataStyle(c, pi % 2 === 1));
+    pi++;
+  }
+
+  wsPay.addRow([]);
+  const payTotalRow = wsPay.addRow([
+    `عدد المدفوعات: ${payments.length}`, "",
+    payTotal, payPaid, payTotal - payPaid > 0 ? payTotal - payPaid : 0,
+    "", "", "", "", "",
+  ]);
+  payTotalRow.eachCell((cell) => {
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFEF3C7" } };
+    cell.font = { bold: true, size: 11 };
+    cell.alignment = { horizontal: "center", vertical: "middle" };
+    cell.border = { top: { style: "medium" }, bottom: { style: "medium" } };
+  });
+  payTotalRow.height = 24;
 
   const buf = await wb.xlsx.writeBuffer();
   return Buffer.from(buf);
