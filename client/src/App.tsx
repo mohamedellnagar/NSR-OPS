@@ -41,6 +41,7 @@ import WaChatsPage from "./pages/WaChatsPage";
 import WaNumbersPage from "./pages/WaNumbersPage";
 import WaAnalyticsDashboard from "./pages/WaAnalyticsDashboard";
 import DailyAccountsPage from "./pages/DailyAccountsPage";
+import MonthlyAccountsPage from "./pages/MonthlyAccountsPage";
 import MaterialPricesPage from "./pages/MaterialPricesPage";
 import MenuPage from "./pages/MenuPage";
 import PublicMenuPage from "./pages/PublicMenuPage";
@@ -180,6 +181,7 @@ function Router() {
       <Route path="/wa-numbers" component={() => <ProtectedRoute pageKey="waNumbers"><WaNumbersPage /></ProtectedRoute>} />
       <Route path="/wa-analytics" component={() => <ProtectedRoute pageKey="waAnalytics"><WaAnalyticsDashboard /></ProtectedRoute>} />
       <Route path="/daily-accounts" component={() => <ProtectedRoute pageKey="dailyAccounts"><DailyAccountsPage /></ProtectedRoute>} />
+      <Route path="/monthly-accounts" component={() => <ProtectedRoute pageKey="monthlyAccounts"><MonthlyAccountsPage /></ProtectedRoute>} />
       <Route path="/supplier-items-report" component={() => <ProtectedRoute pageKey="supplierItemsReport"><SupplierItemsReportPage /></ProtectedRoute>} />
       <Route path="/variance-analysis" component={() => <ProtectedRoute pageKey="varianceAnalysis"><VarianceAnalysisPage /></ProtectedRoute>} />
       <Route path="/purchase-vs-sales" component={() => <ProtectedRoute pageKey="purchaseVsSales"><PurchaseVsSalesPage /></ProtectedRoute>} />

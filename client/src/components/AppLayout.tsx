@@ -154,6 +154,7 @@ export default function AppLayout({ children, noPadding }: { children: ReactNode
         { key: "waNumbers", href: "/wa-numbers", icon: <Phone size={18} /> },
         { key: "waAnalytics", href: "/wa-analytics", icon: <BarChart3 size={18} /> },
         { key: "dailyAccounts", href: "/daily-accounts", icon: <Wallet size={18} /> },
+        { key: "monthlyAccounts", href: "/monthly-accounts", icon: <CalendarDays size={18} /> },
         { key: "materialPrices", href: "/material-prices", icon: <TrendingUp size={18} /> },
         { key: "monthlyPayments", href: "/monthly-payments", icon: <CreditCard size={18} /> },
         { key: "dailyFlash", href: "/daily-flash", icon: <Zap size={18} /> },
