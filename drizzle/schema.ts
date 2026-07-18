@@ -227,6 +227,18 @@ export const invoices = mysqlTable(
     paidAt: timestamp("paidAt"),
     notes: text("notes"),
     expenseCategory: mysqlEnum("expenseCategory", ["operational", "maintenance", "fixed", "other"]).default("other"),
+    // ── Monthly-accounts classification (see shared/expenseClassification.ts) ──
+    // Nullable on purpose: null = "needs classification" (legacy rows the user
+    // has not reviewed). Kept separate from the legacy `expenseCategory` above,
+    // which the daily-accounts aggregation still groups on.
+    expenseType: mysqlEnum("expenseType", ["OPERATIONAL", "NON_OPERATIONAL"]),
+    expenseCategoryCode: mysqlEnum("expenseCategoryCode", [
+      "FOOD_PURCHASES", "SALARIES", "RENT", "UTILITIES", "GAS", "PACKAGING",
+      "CLEANING", "MAINTENANCE", "DELIVERY", "APP_COMMISSIONS", "MARKETING",
+      "BANK_FEES", "EQUIPMENT_ASSETS", "OWNER_DRAW", "TAXES", "LICENSES",
+      "CHARCOAL", "BUTCHERY", "OTHER",
+    ]),
+    paymentMethod: mysqlEnum("paymentMethod", ["CASH", "BANK_TRANSFER", "CARD", "CHEQUE", "OTHER"]),
     stockUpdated: boolean("stockUpdated").default(false).notNull(),
     postToInventory: boolean("postToInventory").notNull().default(false),
     createdBy: int("createdBy").references(() => users.id),
@@ -749,6 +761,16 @@ export const freeInvoices = mysqlTable("free_invoices", {
   paidAmount: decimal("paidAmount", { precision: 12, scale: 3 }).default("0"),
   remainingAmount: decimal("remainingAmount", { precision: 12, scale: 3 }).default("0"),
   expenseCategory: mysqlEnum("expenseCategory", ["operational", "maintenance", "fixed", "other"]).default("other"),
+  // ── Monthly-accounts classification (see shared/expenseClassification.ts) ──
+  // Nullable on purpose: null = "needs classification".
+  expenseType: mysqlEnum("expenseType", ["OPERATIONAL", "NON_OPERATIONAL"]),
+  expenseCategoryCode: mysqlEnum("expenseCategoryCode", [
+    "FOOD_PURCHASES", "SALARIES", "RENT", "UTILITIES", "GAS", "PACKAGING",
+    "CLEANING", "MAINTENANCE", "DELIVERY", "APP_COMMISSIONS", "MARKETING",
+    "BANK_FEES", "EQUIPMENT_ASSETS", "OWNER_DRAW", "TAXES", "LICENSES",
+    "CHARCOAL", "BUTCHERY", "OTHER",
+  ]),
+  paymentMethod: mysqlEnum("paymentMethod", ["CASH", "BANK_TRANSFER", "CARD", "CHEQUE", "OTHER"]),
   paidAt: timestamp("paidAt"),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -1057,6 +1079,34 @@ export type InsertSavedMenu = typeof savedMenus.$inferInsert;
 
 // ─── Restaurant Settings ──────────────────────────────────────────────────────
 // Stores global restaurant settings including the fixed live menu token
+/**
+ * Per-month inputs for the monthly accounts page that are not derivable from
+ * transactions: opening/closing food inventory and any monthly discount.
+ *
+ * One row per (year, month) — enforced by a unique index. There is no branchId
+ * because the project has no multi-branch model; add one here if that changes.
+ */
+export const monthlyAccountSettings = mysqlTable(
+  "monthly_account_settings",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    year: int("year").notNull(),
+    month: int("month").notNull(),
+    openingInventory: decimal("openingInventory", { precision: 14, scale: 3 }).notNull().default("0"),
+    closingInventory: decimal("closingInventory", { precision: 14, scale: 3 }).notNull().default("0"),
+    // Manual monthly figure: daily_accounts records no discounts, so this stays
+    // 0 unless a user enters one.
+    discounts: decimal("discounts", { precision: 14, scale: 3 }).notNull().default("0"),
+    notes: text("notes"),
+    createdBy: int("createdBy").references(() => users.id),
+    updatedBy: int("updatedBy").references(() => users.id),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (t) => [uniqueIndex("uq_mas_year_month").on(t.year, t.month)]
+);
+export type MonthlyAccountSettings = typeof monthlyAccountSettings.$inferSelect;
+
 export const restaurantSettings = mysqlTable("restaurant_settings", {
   id: int("id").autoincrement().primaryKey(),
   // Fixed slug/token for the live menu - never changes, always points to latest menu
@@ -1147,6 +1197,16 @@ export const monthlyPayments = mysqlTable(
     paidAt: timestamp("paidAt"),
     // ملاحظات
     notes: text("notes"),
+    // ── Monthly-accounts classification (see shared/expenseClassification.ts) ──
+    // Backfilled from `category` above, which is kept as-is.
+    expenseType: mysqlEnum("expenseType", ["OPERATIONAL", "NON_OPERATIONAL"]),
+    expenseCategoryCode: mysqlEnum("expenseCategoryCode", [
+      "FOOD_PURCHASES", "SALARIES", "RENT", "UTILITIES", "GAS", "PACKAGING",
+      "CLEANING", "MAINTENANCE", "DELIVERY", "APP_COMMISSIONS", "MARKETING",
+      "BANK_FEES", "EQUIPMENT_ASSETS", "OWNER_DRAW", "TAXES", "LICENSES",
+      "CHARCOAL", "BUTCHERY", "OTHER",
+    ]),
+    paymentMethod: mysqlEnum("paymentMethod", ["CASH", "BANK_TRANSFER", "CARD", "CHEQUE", "OTHER"]),
     createdBy: int("createdBy").references(() => users.id),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
