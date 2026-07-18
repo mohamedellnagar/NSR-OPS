@@ -256,6 +256,7 @@ import {
 import { classifyExpensesWithAI } from "./aiExpenseClassifier";
 import { importExpensesFromExcel, buildExpenseImportTemplate } from "./expense-import";
 import { previewMonthDeletion, deleteMonthInvoices } from "./invoice-bulk-delete";
+import { importSalesFromExcel, buildSalesImportTemplate } from "./sales-import";
 import {
   EXPENSE_TYPES,
   EXPENSE_CATEGORY_CODES,
@@ -630,6 +631,16 @@ export const monthlyAccountsRouter = router({
         scope: input.scope, userId: ctx.user.id,
       });
     }),
+
+  // Bulk import of daily sales into daily_accounts. Upserts by date so a
+  // re-upload updates the day instead of doubling it.
+  salesTemplate: protectedProcedure.query(() => buildSalesImportTemplate()),
+
+  importSales: warehouseProcedure
+    .input(z.object({ base64: z.string().min(1) }))
+    .mutation(({ input, ctx }) =>
+      importSalesFromExcel({ base64: input.base64, userId: ctx.user.id })
+    ),
 
   // Bulk import of paid expenses from an Excel sheet. Creates FREE invoices
   // (never supplier invoices — those post stock movements).

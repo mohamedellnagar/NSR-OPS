@@ -22,7 +22,7 @@ import {
 import {
   CalendarDays, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Receipt,
   Search, TrendingUp, AlertTriangle, Info, Settings2, Save, Calculator,
-  Sparkles, CheckCircle2, CalendarX,
+  Sparkles, CheckCircle2, CalendarX, Upload,
 } from "lucide-react";
 import {
   EXPENSE_TYPES, EXPENSE_TYPE_LABELS, EXPENSE_TYPE_UNSET_LABEL,
@@ -32,6 +32,7 @@ import {
   type ExpenseCategoryCode, type ExpenseType,
 } from "@shared/expenseClassification";
 import DeleteMonthDialog from "@/components/DeleteMonthDialog";
+import SalesImportDialog from "@/components/SalesImportDialog";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -177,6 +178,7 @@ export default function MonthlyAccountsPage() {
   const [expensesOpen, setExpensesOpen] = useState(false);
   const [drill, setDrill] = useState<DrillKey | null>(null);
   const [showDeleteMonth, setShowDeleteMonth] = useState(false);
+  const [showSalesImport, setShowSalesImport] = useState(false);
 
   // Expense table filters — client-side, so they never affect the summary.
   const [search, setSearch] = useState("");
@@ -592,6 +594,16 @@ export default function MonthlyAccountsPage() {
                       <TrendingUp className="w-5 h-5 text-violet-600" />
                       المبيعات اليومية
                       <Badge variant="secondary">{dailySales.length} يوم</Badge>
+                      {canEdit && (
+                        <Button
+                          variant="outline" size="sm" className="gap-1.5 h-7 text-xs"
+                          onClick={(e) => { e.stopPropagation(); setShowSalesImport(true); }}
+                          title="رفع مبيعات الأيام من ملف إكسل"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          رفع مبيعات
+                        </Button>
+                      )}
                     </span>
                     <ChevronDown className={`w-4 h-4 transition-transform ${salesOpen ? "rotate-180" : ""}`} />
                   </CardTitle>
@@ -921,6 +933,13 @@ export default function MonthlyAccountsPage() {
           </Collapsible>
         </>
       )}
+
+      <SalesImportDialog
+        open={showSalesImport}
+        onOpenChange={setShowSalesImport}
+        currency={currency}
+        onImported={invalidate}
+      />
 
       <DeleteMonthDialog
         open={showDeleteMonth}
