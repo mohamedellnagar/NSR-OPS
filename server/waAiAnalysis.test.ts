@@ -7,20 +7,30 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // ─── Hoist mocks so they are available before vi.mock factory runs ──────────────
+// `mockEnd` stands for "connection returned when done". Since server/pool.ts the
+// code takes a pooled connection and calls release(), so it is wired to release.
 const { mockExecute, mockEnd } = vi.hoisted(() => ({
   mockExecute: vi.fn(),
   mockEnd: vi.fn(),
 }));
 
 // ─── Mock mysql2/promise ────────────────────────────────────────────────
-vi.mock("mysql2/promise", () => ({
-  default: {
-    createConnection: vi.fn().mockResolvedValue({
-      execute: mockExecute,
-      end: mockEnd,
-    }),
-  },
-}));
+// server/pool.ts calls createPool(...).getConnection().
+vi.mock("mysql2/promise", () => {
+  const connection = {
+    execute: mockExecute,
+    query: mockExecute,
+    release: mockEnd,
+    end: mockEnd,
+  };
+  const pool = { getConnection: vi.fn().mockResolvedValue(connection) };
+  return {
+    default: {
+      createPool: vi.fn(() => pool),
+      createConnection: vi.fn().mockResolvedValue(connection),
+    },
+  };
+});
 
 // ─── Mock LLM ──────────────────────────────────────────────────────────────────────────────
 vi.mock("./_core/llm", () => ({

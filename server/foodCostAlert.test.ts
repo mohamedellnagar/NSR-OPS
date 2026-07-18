@@ -18,14 +18,26 @@ vi.mock("./whatsappScheduler", () => ({
   triggerEventSubscriptions: mockTrigger,
 }));
 
-vi.mock("mysql2/promise", () => ({
-  default: {
-    createConnection: vi.fn(() => ({
-      execute: mockExecute,
-      end: vi.fn(),
-    })),
-  },
-}));
+// server/pool.ts calls createPool(...).getConnection().
+vi.mock("mysql2/promise", () => {
+  const connection = {
+    execute: mockExecute,
+    query: mockExecute,
+    release: vi.fn(),
+    end: vi.fn(),
+  };
+  const pool = { getConnection: vi.fn(async () => connection) };
+  return {
+    default: {
+      createPool: vi.fn(() => pool),
+      createConnection: vi.fn(() => connection),
+    },
+  };
+});
+
+// server/pool.ts refuses to build a pool without DATABASE_URL. mysql2 is mocked
+// above, so this value is never dialled — it only satisfies that guard.
+process.env.DATABASE_URL ||= "mysql://test:test@localhost:3306/test";
 
 import { checkFoodCostImpact } from "./foodCostAlert";
 
