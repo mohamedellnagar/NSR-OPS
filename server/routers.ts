@@ -248,6 +248,21 @@ import { calcProductionRequirements, checkSingleProductFeasibility } from "./pro
 import { getMenuEngineeringAnalysis } from "./menu-engineering-db";
 import { listShifts, createShift, updateShift, deleteShift, getShiftStats } from "./shifts-db";
 import {
+  getMonthlyAccounts,
+  updateExpenseClassification,
+  getMonthlyAccountSettings,
+  saveMonthlyAccountSettings,
+} from "./monthly-accounts-db";
+import { classifyExpensesWithAI } from "./aiExpenseClassifier";
+import { importExpensesFromExcel, buildExpenseImportTemplate } from "./expense-import";
+import { previewMonthDeletion, deleteMonthInvoices } from "./invoice-bulk-delete";
+import {
+  EXPENSE_TYPES,
+  EXPENSE_CATEGORY_CODES,
+  EXPENSE_SOURCE_TYPES,
+  PAYMENT_METHODS,
+} from "@shared/expenseClassification";
+import {
   listPurchaseOrders,
   getPurchaseOrderById,
   createPurchaseOrder,
@@ -552,6 +567,123 @@ export const menuEngineeringRouter = router({
   analyze: protectedProcedure
     .input(z.object({ fromDate: z.string(), toDate: z.string() }))
     .query(({ input }) => getMenuEngineeringAnalysis(input.fromDate, input.toDate)),
+});
+
+// ─── Monthly Accounts Router ──────────────────────────────────────────────────
+// Phase 1: sales + unified expenses for one month, and classification edits.
+// Viewing is protectedProcedure; editing a classification is warehouseProcedure
+// (viewers are read-only).
+export const monthlyAccountsRouter = router({
+  // Returns the whole month in one payload: sales, every expense, the settings
+  // and the computed summary. The client filters the expense table locally, so
+  // filtering never affects the P&L.
+  getMonth: protectedProcedure
+    .input(
+      z.object({
+        year: z.number().int().min(2000).max(2100),
+        month: z.number().int().min(1).max(12),
+      })
+    )
+    .query(({ input }) => getMonthlyAccounts(input.year, input.month)),
+
+  getSettings: protectedProcedure
+    .input(
+      z.object({
+        year: z.number().int().min(2000).max(2100),
+        month: z.number().int().min(1).max(12),
+      })
+    )
+    .query(({ input }) => getMonthlyAccountSettings(input.year, input.month)),
+
+  // ── Bulk month deletion ──
+  // Destructive and irreversible: admin only. `preview` must be shown first —
+  // deleting supplier invoices reverses stock, which the UI has to surface.
+  previewMonthDeletion: adminProcedure
+    .input(
+      z.object({
+        year: z.number().int().min(2000).max(2100),
+        month: z.number().int().min(1).max(12),
+      })
+    )
+    .query(({ input }) => previewMonthDeletion(input.year, input.month)),
+
+  deleteMonth: adminProcedure
+    .input(
+      z.object({
+        year: z.number().int().min(2000).max(2100),
+        month: z.number().int().min(1).max(12),
+        scope: z.enum(["ALL", "FREE_ONLY", "IMPORTED_ONLY"]),
+        // The client must echo back "YYYY-MM" so a stray click cannot wipe a month.
+        confirm: z.string(),
+      })
+    )
+    .mutation(({ input, ctx }) => {
+      const expected = `${input.year}-${String(input.month).padStart(2, "0")}`;
+      if (input.confirm.trim() !== expected) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `للتأكيد اكتب ${expected} بالضبط`,
+        });
+      }
+      return deleteMonthInvoices({
+        year: input.year, month: input.month,
+        scope: input.scope, userId: ctx.user.id,
+      });
+    }),
+
+  // Bulk import of paid expenses from an Excel sheet. Creates FREE invoices
+  // (never supplier invoices — those post stock movements).
+  importTemplate: protectedProcedure.query(() => buildExpenseImportTemplate()),
+
+  importExpenses: warehouseProcedure
+    .input(z.object({ base64: z.string().min(1) }))
+    .mutation(({ input }) => importExpensesFromExcel({ base64: input.base64 })),
+
+  // AI-assisted classification. Writes to financial records, so it is
+  // admin-only and never persists a value outside the shared enums.
+  aiClassify: adminProcedure
+    .input(
+      z.object({
+        year: z.number().int().min(2000).max(2100),
+        month: z.number().int().min(1).max(12),
+        // false = re-classify everything, including already-classified rows
+        onlyUnclassified: z.boolean().default(true),
+      })
+    )
+    .mutation(({ input }) =>
+      classifyExpensesWithAI({
+        year: input.year,
+        month: input.month,
+        onlyUnclassified: input.onlyUnclassified,
+      })
+    ),
+
+  saveSettings: warehouseProcedure
+    .input(
+      z.object({
+        year: z.number().int().min(2000).max(2100),
+        month: z.number().int().min(1).max(12),
+        openingInventory: z.number().min(0, "مخزون أول الشهر لا يمكن أن يكون سالبًا"),
+        closingInventory: z.number().min(0, "مخزون آخر الشهر لا يمكن أن يكون سالبًا"),
+        discounts: z.number().min(0, "الخصومات لا يمكن أن تكون سالبة").default(0),
+        notes: z.string().max(1000).nullable().optional(),
+      })
+    )
+    .mutation(({ input, ctx }) =>
+      saveMonthlyAccountSettings({ ...input, userId: ctx.user.id })
+    ),
+
+  updateClassification: warehouseProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive(),
+        sourceType: z.enum(EXPENSE_SOURCE_TYPES),
+        expenseType: z.enum(EXPENSE_TYPES).nullable().optional(),
+        expenseCategoryCode: z.enum(EXPENSE_CATEGORY_CODES).nullable().optional(),
+        paymentMethod: z.enum(PAYMENT_METHODS).nullable().optional(),
+      })
+    )
+    .mutation(({ input }) => updateExpenseClassification(input)),
 });
 
 // ─── Shifts Router ────────────────────────────────────────────────────────────
@@ -1121,6 +1253,7 @@ export const appRouter = router({
   productionPlanning: productionPlanningRouter,
   menuEngineering: menuEngineeringRouter,
   shifts: shiftsRouter,
+  monthlyAccounts: monthlyAccountsRouter,
   purchaseOrders: purchaseOrdersRouter,
   inventoryIntelligence: inventoryIntelligenceRouter,
   priceSimulator: priceSimulatorRouter,

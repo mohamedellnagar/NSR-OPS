@@ -9,10 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import ExpenseImportDialog from "@/components/ExpenseImportDialog";
+import DeleteMonthDialog from "@/components/DeleteMonthDialog";
 import {
   Plus, Trash2, Eye, FileText, CheckCircle, Clock, AlertCircle, Search as SearchIcon,
   ChevronDown, ChevronUp, X, Loader2, Search, Pencil, Receipt, FileDown, Sheet, ShoppingCart, Wrench, Building2, Zap,
-  Send, ShieldCheck, Ban, History, PackagePlus, ArrowRight, ArrowLeft,
+  Send, ShieldCheck, Ban, History, PackagePlus, ArrowRight, ArrowLeft, Upload, CalendarX,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -105,6 +107,8 @@ export default function InvoicesPage() {
 
   // Dialogs
   const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [showDeleteMonth, setShowDeleteMonth] = useState(false);
   const [wizardStep, setWizardStep] = useState(0); // 0=Info, 1=Items, 2=Payment, 3=Review
   const [viewInvoice, setViewInvoice] = useState<number | null>(null);
   const [viewInvoiceType, setViewInvoiceType] = useState<"supplier" | "free">("supplier");
@@ -638,6 +642,26 @@ export default function InvoicesPage() {
           >
             {pdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileDown size={16} />}
             {ar ? "تصدير PDF" : "Export PDF"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowImport(true)}
+            className="gap-2 border-violet-400 text-violet-700 hover:bg-violet-50 dark:border-violet-600 dark:text-violet-400 dark:hover:bg-violet-950/30"
+          >
+            <Upload size={16} />
+            {ar ? "رفع من إكسل" : "Import from Excel"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteMonth(true)}
+            disabled={!monthFilter}
+            title={monthFilter
+              ? (ar ? "حذف كل فواتير الشهر المحدد" : "Delete all invoices of the selected month")
+              : (ar ? "اختر شهرًا من الفلتر أولاً" : "Pick a month in the filter first")}
+            className="gap-2 border-rose-400 text-rose-700 hover:bg-rose-50 dark:border-rose-600 dark:text-rose-400 dark:hover:bg-rose-950/30"
+          >
+            <CalendarX size={16} />
+            {ar ? "حذف فواتير الشهر" : "Delete month"}
           </Button>
           <Button onClick={() => setShowCreate(true)} className="gap-2">
             <Plus size={16} />
@@ -1967,6 +1991,26 @@ export default function InvoicesPage() {
           })()}
         </DialogContent>
       </Dialog>
+
+      <ExpenseImportDialog
+        open={showImport}
+        onOpenChange={setShowImport}
+        ar={ar}
+        onImported={() => {
+          utils.invoices.allUnified.invalidate();
+          utils.freeInvoices.list.invalidate();
+        }}
+      />
+
+      {monthFilter && (
+        <DeleteMonthDialog
+          open={showDeleteMonth}
+          onOpenChange={setShowDeleteMonth}
+          year={parseInt(monthFilter.split("-")[0], 10)}
+          month={parseInt(monthFilter.split("-")[1], 10)}
+          onDeleted={() => utils.invoices.allUnified.invalidate()}
+        />
+      )}
     </div>
   );
 }
