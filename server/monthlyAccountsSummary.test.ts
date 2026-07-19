@@ -421,3 +421,70 @@ describe("قواعد محاسبة المطاعم", () => {
     expect(s.recordedExpenses.excludedFromPL).toBe(1400);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe("أكل الموظفين — إعادة تصنيف من تكلفة الطعام إلى العمالة", () => {
+  const sales = { cash: 10000, card: 0, kita: 0, orders: 0, careem: 0, deliveroo: 0, noon: 0 };
+  const base = {
+    sales,
+    expenses: [
+      { expenseType: "OPERATIONAL", expenseCategoryCode: "FOOD_PURCHASES", total: 3000 },
+      { expenseType: "OPERATIONAL", expenseCategoryCode: "SALARIES", total: 2000 },
+    ],
+    openingInventory: 500, closingInventory: 400,
+  };
+
+  const withMeals = calculateMonthlyAccountsSummary(makeInput({ ...base, staffMeals: 300 }));
+  const noMeals = calculateMonthlyAccountsSummary(makeInput({ ...base, staffMeals: 0 }));
+
+  it("تكلفة الطعام الإجمالية = مخزون أول + مشتريات − مخزون آخر", () => {
+    expect(withMeals.inventory.foodCostGross).toBe(3100); // 500 + 3000 - 400
+  });
+
+  it("أكل الموظفين يُخصم من تكلفة الطعام", () => {
+    expect(withMeals.inventory.staffMealsCredit).toBe(300);
+    expect(withMeals.inventory.foodCost).toBe(2800); // 3100 - 300
+  });
+
+  it("ويُضاف إلى العمالة", () => {
+    expect(noMeals.keyMetrics.labourCost).toBe(2000);
+    expect(withMeals.keyMetrics.labourCost).toBe(2300); // 2000 + 300
+  });
+
+  it("★ لا يغيّر صافي الربح — نفس المال في خانة مختلفة", () => {
+    expect(withMeals.profits.netProfitAfterInventory)
+      .toBe(noMeals.profits.netProfitAfterInventory);
+  });
+
+  it("★ لا يغيّر التكلفة الأولية — ما خرج من الطعام دخل العمالة", () => {
+    expect(withMeals.keyMetrics.primeCost).toBe(noMeals.keyMetrics.primeCost);
+  });
+
+  it("لكنه يصحّح النسب: الفود كوست ينزل والعمالة تطلع", () => {
+    expect(withMeals.inventory.foodCostPercentage)
+      .toBeLessThan(noMeals.inventory.foodCostPercentage);
+    expect(withMeals.keyMetrics.labourCostPercentage)
+      .toBeGreaterThan(noMeals.keyMetrics.labourCostPercentage);
+  });
+
+  it("المعادلتان تظلان متطابقتين", () => {
+    expect(withMeals.profits.netProfitAfterInventory).toBe(verifyNetProfit(withMeals));
+  });
+
+  it("لا يخصم أكثر من تكلفة الطعام الموجودة", () => {
+    const s = calculateMonthlyAccountsSummary(
+      makeInput({ ...base, openingInventory: 0, closingInventory: 0,
+        expenses: [{ expenseType: "OPERATIONAL", expenseCategoryCode: "FOOD_PURCHASES", total: 100 }],
+        staffMeals: 5000 })
+    );
+    expect(s.inventory.staffMealsCredit).toBe(100); // محدود بالمتاح
+    expect(s.inventory.foodCost).toBe(0);
+    expect(s.inventory.foodCost).toBeGreaterThanOrEqual(0);
+  });
+
+  it("إجمالي المصروفات بعد التسوية يظل متسقًا مع الربح", () => {
+    expect(withMeals.profits.netProfitAfterInventory).toBe(
+      Math.round((withMeals.sales.netSales - withMeals.profits.adjustedTotalExpenses) * 1000) / 1000
+    );
+  });
+});

@@ -84,6 +84,11 @@ export interface MonthlyAccountsSummary {
     openingInventory: number;
     foodPurchases: number;
     closingInventory: number;
+    /** Opening + purchases - closing, before the staff-meal credit. */
+    foodCostGross: number;
+    /** Food eaten by staff, moved out of COGS and onto labour. */
+    staffMealsCredit: number;
+    /** What customers actually ate — the figure the food cost % is based on. */
     foodCost: number;
     foodCostPercentage: number;
   };
@@ -99,6 +104,7 @@ export interface MonthlyAccountsSummary {
   };
   /** Restaurant benchmarks. Analytical only — never deducted anywhere. */
   keyMetrics: {
+    /** Wages plus staff meals — meals are a staff benefit, not a cost of sales. */
     labourCost: number;
     labourCostPercentage: number;
     primeCost: number;
@@ -223,7 +229,15 @@ export function calculateMonthlyAccountsSummary(input: SummaryInput): MonthlyAcc
   // ── 9. Actual food cost = opening + purchases - closing ──
   const openingInventory = round3(input.openingInventory);
   const closingInventory = round3(input.closingInventory);
-  const foodCost = round3(openingInventory + foodPurchasesM - closingInventory);
+  const foodCostGross = round3(openingInventory + foodPurchasesM - closingInventory);
+
+  // Staff meals come out of the same larder, so their value sits inside
+  // foodCostGross. Charging it to customers' food cost overstates that ratio
+  // and understates labour, where a meal benefit belongs. Moving it is
+  // deliberately PROFIT-NEUTRAL: the same money is simply reported under the
+  // heading it belongs to, and the P&L subtracts it on its own line below.
+  const staffMealsCredit = Math.min(round3(Math.max(0, input.staffMeals)), Math.max(0, foodCostGross));
+  const foodCost = round3(foodCostGross - staffMealsCredit);
 
   // ── 10. Food cost % of net sales ──
   const foodCostPercentage = safePercentage(foodCost, netSales);
@@ -234,13 +248,13 @@ export function calculateMonthlyAccountsSummary(input: SummaryInput): MonthlyAcc
   const nonOperationalExcludingFood = round3(nonOperationalM - nonOperationalFood / SCALE);
 
   // ── 13/14/15/16 ──
-  const grossProfitAfterFoodCost = round3(netSales - foodCost);
+  const grossProfitAfterFoodCost = round3(netSales - foodCost - staffMealsCredit);
   const operatingProfit = round3(grossProfitAfterFoodCost - operationalExcludingFood);
   const adjustedTotalExpenses = round3(
-    foodCost + operationalExcludingFood + nonOperationalExcludingFood
+    foodCost + staffMealsCredit + operationalExcludingFood + nonOperationalExcludingFood
   );
   const netProfitAfterInventory = round3(
-    netSales - foodCost - operationalExcludingFood - nonOperationalExcludingFood
+    netSales - foodCost - staffMealsCredit - operationalExcludingFood - nonOperationalExcludingFood
   );
 
   // ── 17. Net profit margin ──
@@ -250,7 +264,9 @@ export function calculateMonthlyAccountsSummary(input: SummaryInput): MonthlyAcc
   // Analytical only. Both components are already inside the P&L above, so this
   // is never added or subtracted anywhere — it exists to be compared against
   // the 55-65% industry band.
-  const labourCostM = round3(labourCost / SCALE);
+  const labourCostM = round3(labourCost / SCALE + staffMealsCredit);
+  // Unchanged by the reclassification: what leaves food cost enters labour, so
+  // prime cost stays gross food + wages either way. A useful invariant.
   const primeCost = round3(foodCost + labourCostM);
 
   // A lump sum covering several months (rent, a licence) charged wholly to this
@@ -293,6 +309,8 @@ export function calculateMonthlyAccountsSummary(input: SummaryInput): MonthlyAcc
       openingInventory,
       foodPurchases: round3(foodPurchasesM),
       closingInventory,
+      foodCostGross,
+      staffMealsCredit,
       foodCost,
       foodCostPercentage,
     },
@@ -346,7 +364,7 @@ export function verifyNetProfit(summary: MonthlyAccountsSummary): number {
   return round3(
     summary.profits.profitBeforeInventory +
       summary.inventory.foodPurchases -
-      summary.inventory.foodCost
+      summary.inventory.foodCostGross
   );
 }
 

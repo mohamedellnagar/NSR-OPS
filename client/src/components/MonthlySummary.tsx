@@ -79,24 +79,36 @@ export default function MonthlySummary({
           <Line label="صافي المبيعات" amount={s.sales.netSales} sign="=" strong currency={currency} />
 
           <Line
-            label="تكلفة الطعام" amount={-s.inventory.foodCost} sign="−" currency={currency}
+            label={s.inventory.staffMealsCredit > 0 ? "تكلفة الطعام (للعملاء)" : "تكلفة الطعام"}
+            amount={-s.inventory.foodCost} sign="−" currency={currency}
             note={pct(s.inventory.foodCostPercentage)}
             noteTone={s.inventory.foodCostPercentage > BANDS.food.max ? "bad" : "ok"}
-            tooltip={"تكلفة الطعام =\nمخزون أول الشهر + مشتريات الطعام − مخزون آخر الشهر"}
+            tooltip={"تكلفة الطعام =\nمخزون أول الشهر + مشتريات الطعام − مخزون آخر الشهر\n− أكل الموظفين\n\nأكل الموظفين يخرج من هنا ويُحمّل على العمالة،\nلأنه ميزة للموظفين وليس تكلفة بيع للعملاء."}
             onClick={() => onDrill("foodPurchases")}
           />
 
           <Line label="مجمل الربح" amount={s.profits.grossProfitAfterFoodCost} sign="=" subtotal currency={currency} />
 
           <Line
-            label="الرواتب والأجور" amount={-s.keyMetrics.labourCost} sign="−" currency={currency}
+            label="الرواتب والأجور"
+            amount={-(s.keyMetrics.labourCost - s.inventory.staffMealsCredit)}
+            sign="−" currency={currency}
             note={pct(s.keyMetrics.labourCostPercentage)}
             noteTone={s.keyMetrics.labourCostPercentage > BANDS.labour.max ? "bad" : "ok"}
           />
 
+          {s.inventory.staffMealsCredit > 0 && (
+            <Line
+              label="أكل الموظفين (من المخزون)" amount={-s.inventory.staffMealsCredit}
+              sign="−" currency={currency}
+              tooltip={"قيمة الطعام الذي استهلكه الموظفون.\nخرج من تكلفة الطعام ودخل هنا ضمن العمالة —\nنفس المبلغ، ولا يغيّر صافي الربح."}
+            />
+          )}
+
           <Line
             label="مصروفات تشغيلية أخرى"
-            amount={-(s.profits.operationalExcludingFood - s.keyMetrics.labourCost)}
+            amount={-(s.profits.operationalExcludingFood
+              - (s.keyMetrics.labourCost - s.inventory.staffMealsCredit))}
             sign="−" currency={currency}
             onClick={() => onDrill("operationalExFood")}
           />
@@ -123,7 +135,7 @@ export default function MonthlySummary({
       <div className="rounded-xl border p-4 space-y-3">
         <p className="text-sm font-bold">المؤشرات مقارنة بالمعدل الصحي</p>
         <Gauge label="تكلفة الطعام" value={s.inventory.foodCostPercentage} max={BANDS.food.max} band={BANDS.food.label} />
-        <Gauge label="العمالة" value={s.keyMetrics.labourCostPercentage} max={BANDS.labour.max} band={BANDS.labour.label} />
+        <Gauge label="العمالة (شاملة أكل الموظفين)" value={s.keyMetrics.labourCostPercentage} max={BANDS.labour.max} band={BANDS.labour.label} />
         <Gauge label="التكلفة الأولية" value={s.keyMetrics.primeCostPercentage} max={BANDS.prime.max} band={BANDS.prime.label} strong />
         <p className="text-[11px] text-muted-foreground pt-1 border-t">
           التكلفة الأولية = تكلفة الطعام + العمالة. أهم مؤشر تشغيلي في المطاعم.
@@ -147,6 +159,13 @@ export default function MonthlySummary({
               <Detail label="مخزون أول الشهر" value={`${fmt(s.inventory.openingInventory)} ${currency}`} />
               <Detail label="مشتريات الطعام" value={`${fmt(s.inventory.foodPurchases)} ${currency}`} onClick={() => onDrill("foodPurchases")} />
               <Detail label="مخزون آخر الشهر" value={`${fmt(s.inventory.closingInventory)} ${currency}`} />
+              {s.inventory.staffMealsCredit > 0 && (
+                <Detail
+                  label="تكلفة الطعام قبل خصم أكل الموظفين"
+                  value={`${fmt(s.inventory.foodCostGross)} ${currency}`}
+                  tooltip={"الرقم قبل نقل أكل الموظفين إلى العمالة."}
+                />
+              )}
             </div>
             <div>
               <p className="text-xs font-bold text-muted-foreground mb-1">مصروفات وبنود أخرى</p>
