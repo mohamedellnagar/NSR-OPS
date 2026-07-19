@@ -77,6 +77,8 @@ export interface MonthlyAccountsSummary {
     nonOperational: number;
     unclassified: number;
     totalRecorded: number;
+    /** Owner draws and capital purchases — money out, but not P&L expenses. */
+    excludedFromPL: number;
   };
   inventory: {
     openingInventory: number;
@@ -95,6 +97,13 @@ export interface MonthlyAccountsSummary {
     netProfitAfterInventory: number;
     netProfitMargin: number;
   };
+  /** Restaurant benchmarks. Analytical only — never deducted anywhere. */
+  keyMetrics: {
+    labourCost: number;
+    labourCostPercentage: number;
+    primeCost: number;
+    primeCostPercentage: number;
+  };
   staffMeals: { total: number; percentage: number };
   warnings: {
     unclassifiedInvoicesCount: number;
@@ -107,12 +116,37 @@ export interface MonthlyAccountsSummary {
     discountsExceedSales: boolean;
     /** FOOD_PURCHASES invoices marked NON_OPERATIONAL — needs a human look. */
     nonOperationalFoodPurchasesCount: number;
+    /** Single expenses big enough to distort the month — usually a lump sum
+     *  covering several months (rent, licences) charged entirely to this one. */
+    largeExpenses: Array<{ label: string; amount: number; shareOfSales: number }>;
   };
 }
 
-const FOOD = "FOOD_PURCHASES";
 const OPERATIONAL = "OPERATIONAL";
 const NON_OPERATIONAL = "NON_OPERATIONAL";
+
+/**
+ * Categories that make up cost of goods sold. Butchery is meat — it is food,
+ * and leaving it out understated the food cost percentage. Charcoal and gas are
+ * deliberately NOT here: they are energy/operating supplies, not COGS.
+ */
+export const FOOD_COST_CATEGORIES = new Set(["FOOD_PURCHASES", "BUTCHERY"]);
+
+/** Labour, for prime cost. */
+export const LABOUR_CATEGORIES = new Set(["SALARIES"]);
+
+/**
+ * Not expenses at all, so they must not reduce profit:
+ *   OWNER_DRAW       — a distribution of equity, not a cost of trading.
+ *   EQUIPMENT_ASSETS — capital expenditure; it belongs on the balance sheet and
+ *                      is consumed through depreciation, not charged in full to
+ *                      the month it was bought.
+ * They are reported separately so the money is still visible.
+ */
+export const EXCLUDED_FROM_PL_CATEGORIES = new Set(["OWNER_DRAW", "EQUIPMENT_ASSETS"]);
+
+/** A single expense larger than this share of net sales is worth a second look. */
+const LARGE_EXPENSE_SHARE_OF_SALES = 0.2;
 
 export function calculateMonthlyAccountsSummary(input: SummaryInput): MonthlyAccountsSummary {
   const s = input.sales;
@@ -134,24 +168,37 @@ export function calculateMonthlyAccountsSummary(input: SummaryInput): MonthlyAcc
   let nonOperational = 0;
   let unclassified = 0;
   let unclassifiedCount = 0;
+  let excludedFromPL = 0;
   let foodPurchases = 0;
   let operationalFood = 0;
   let nonOperationalFood = 0;
   let nonOperationalFoodCount = 0;
+  let labourCost = 0;
+  const largeExpenses: MonthlyAccountsSummary["warnings"]["largeExpenses"] = [];
 
   for (const e of input.expenses) {
     const amount = Math.round((Number.isFinite(e.total) ? e.total : 0) * SCALE);
-    const isFood = e.expenseCategoryCode === FOOD;
+    const code = e.expenseCategoryCode ?? "";
+    const isFood = FOOD_COST_CATEGORIES.has(code);
+
+    // Owner draws and capital purchases leave the P&L entirely, whatever their
+    // expenseType says — they are not costs of trading.
+    if (EXCLUDED_FROM_PL_CATEGORIES.has(code)) {
+      excludedFromPL += amount;
+      continue;
+    }
 
     if (e.expenseType === OPERATIONAL) {
       operational += amount;
       if (isFood) operationalFood += amount;
+      if (LABOUR_CATEGORIES.has(code)) labourCost += amount;
     } else if (e.expenseType === NON_OPERATIONAL) {
       nonOperational += amount;
       if (isFood) {
         nonOperationalFood += amount;
         nonOperationalFoodCount++;
       }
+      if (LABOUR_CATEGORIES.has(code)) labourCost += amount;
     } else {
       unclassified += amount;
       unclassifiedCount++;
@@ -199,6 +246,30 @@ export function calculateMonthlyAccountsSummary(input: SummaryInput): MonthlyAcc
   // ── 17. Net profit margin ──
   const netProfitMargin = safePercentage(netProfitAfterInventory, netSales);
 
+  // ── Prime cost: the headline restaurant benchmark (food + labour) ──
+  // Analytical only. Both components are already inside the P&L above, so this
+  // is never added or subtracted anywhere — it exists to be compared against
+  // the 55-65% industry band.
+  const labourCostM = round3(labourCost / SCALE);
+  const primeCost = round3(foodCost + labourCostM);
+
+  // A lump sum covering several months (rent, a licence) charged wholly to this
+  // month makes the result look far worse than trading actually was.
+  const threshold = netSales * LARGE_EXPENSE_SHARE_OF_SALES;
+  if (netSales > 0) {
+    for (const e of input.expenses) {
+      const amt = Number.isFinite(e.total) ? e.total : 0;
+      if (amt >= threshold) {
+        largeExpenses.push({
+          label: e.expenseCategoryCode ?? "غير مصنف",
+          amount: round3(amt),
+          shareOfSales: safePercentage(amt, netSales),
+        });
+      }
+    }
+    largeExpenses.sort((a, b) => b.amount - a.amount);
+  }
+
   // ── 18. Staff meals: an indicator only, never deducted again ──
   const staffMealsTotal = round3(input.staffMeals);
 
@@ -216,6 +287,7 @@ export function calculateMonthlyAccountsSummary(input: SummaryInput): MonthlyAcc
       nonOperational: round3(nonOperationalM),
       unclassified: round3(unclassifiedM),
       totalRecorded,
+      excludedFromPL: round3(excludedFromPL / SCALE),
     },
     inventory: {
       openingInventory,
@@ -233,6 +305,12 @@ export function calculateMonthlyAccountsSummary(input: SummaryInput): MonthlyAcc
       adjustedTotalExpenses,
       netProfitAfterInventory,
       netProfitMargin,
+    },
+    keyMetrics: {
+      labourCost: labourCostM,
+      labourCostPercentage: safePercentage(labourCostM, netSales),
+      primeCost,
+      primeCostPercentage: safePercentage(primeCost, netSales),
     },
     staffMeals: {
       total: staffMealsTotal,
@@ -252,6 +330,7 @@ export function calculateMonthlyAccountsSummary(input: SummaryInput): MonthlyAcc
       closingInventoryTooHigh: closingInventory > openingInventory + foodPurchasesM,
       discountsExceedSales,
       nonOperationalFoodPurchasesCount: nonOperationalFoodCount,
+      largeExpenses,
     },
   };
 }

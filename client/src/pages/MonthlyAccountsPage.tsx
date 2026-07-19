@@ -418,6 +418,27 @@ export default function MonthlyAccountsPage() {
               الخصومات أكبر من إجمالي المبيعات — تم اعتبار صافي المبيعات صفرًا.
             </div>
           )}
+          {(warn?.largeExpenses.length ?? 0) > 0 && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 p-3 flex items-start gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-800 dark:text-amber-300">
+                <p className="font-semibold">
+                  دفعات كبيرة قد تشوّه نتيجة الشهر ({warn!.largeExpenses.length}):
+                </p>
+                {warn!.largeExpenses.slice(0, 4).map((e, i) => (
+                  <p key={i}>
+                    • {EXPENSE_CATEGORY_LABELS[e.label as ExpenseCategoryCode] ?? e.label}:{" "}
+                    {fmt(e.amount)} {currency} — {pct(e.shareOfSales)} من المبيعات
+                  </p>
+                ))}
+                <p className="mt-1">
+                  إذا كانت دفعة واحدة تغطي عدة شهور (إيجار، ترخيص)، فتحميلها على هذا الشهر
+                  وحده يجعل النتيجة أسوأ من الواقع.
+                </p>
+              </div>
+            </div>
+          )}
+
           {(warn?.nonOperationalFoodPurchasesCount ?? 0) > 0 && (
             <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300">
               يوجد {warn!.nonOperationalFoodPurchasesCount} فاتورة «مشتريات غذائية» مصنفة
@@ -554,6 +575,13 @@ export default function MonthlyAccountsPage() {
                           onClick={() => setDrill("unclassified")}
                         />
                       )}
+                      {summary.recordedExpenses.excludedFromPL > 0 && (
+                        <SummaryRow
+                          label="سحب مالك ومشتريات أصول (خارج الأرباح)"
+                          value={fmt(summary.recordedExpenses.excludedFromPL)} currency={currency}
+                          formula={"سحب المالك توزيع أرباح وليس مصروفًا،\nوشراء الأصول مصروف رأسمالي يُستهلك على سنوات.\nلذلك لا يُخصم أي منهما من ربح الشهر."}
+                        />
+                      )}
                       <SummaryRow
                         label="إجمالي المصروفات المسجلة" value={fmt(summary.recordedExpenses.totalRecorded)}
                         currency={currency} strong
@@ -582,6 +610,25 @@ export default function MonthlyAccountsPage() {
                       <SummaryRow
                         label="نسبة تكلفة الطعام" value={pct(summary.inventory.foodCostPercentage)}
                         formula={"نسبة تكلفة الطعام =\nتكلفة الطعام ÷ صافي المبيعات × 100"}
+                      />
+                      <SummaryRow
+                        label="تكلفة العمالة" value={fmt(summary.keyMetrics.labourCost)} currency={currency}
+                        formula={"الرواتب والأجور.\nالمعدل الصحي في المطاعم: 25–35% من صافي المبيعات."}
+                      />
+                      <SummaryRow
+                        label="نسبة العمالة" value={pct(summary.keyMetrics.labourCostPercentage)}
+                        tone={summary.keyMetrics.labourCostPercentage > 35 ? "loss" : "neutral"}
+                      />
+                      <SummaryRow
+                        label="التكلفة الأولية (Prime Cost)" value={fmt(summary.keyMetrics.primeCost)}
+                        currency={currency} strong
+                        formula={"التكلفة الأولية = تكلفة الطعام + تكلفة العمالة.\n\nأهم مؤشر في تشغيل المطاعم.\nالمعدل الصحي: 55–65% من صافي المبيعات.\n\nمؤشر تحليلي — غير مخصوم مرتين."}
+                      />
+                      <SummaryRow
+                        label="نسبة التكلفة الأولية" value={pct(summary.keyMetrics.primeCostPercentage)}
+                        strong
+                        tone={summary.keyMetrics.primeCostPercentage > 65 ? "loss"
+                          : summary.keyMetrics.primeCostPercentage > 0 ? "profit" : "neutral"}
                       />
                       <SummaryRow label="مجمل الربح بعد تكلفة الطعام" currency={currency} {...profitProps(summary.profits.grossProfitAfterFoodCost)} />
                       <SummaryRow

@@ -315,3 +315,109 @@ describe("عدم خصم مشتريات الطعام مرتين — عبر حال
     });
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+describe("قواعد محاسبة المطاعم", () => {
+  const sales1000 = { cash: 1000, card: 0, kita: 0, orders: 0, careem: 0, deliveroo: 0, noon: 0 };
+  const cat = (code: string, total: number, type = "OPERATIONAL") =>
+    ({ expenseType: type, expenseCategoryCode: code, total });
+
+  it("الملحمة تدخل في تكلفة الطعام (اللحمة أكل)", () => {
+    const s = calculateMonthlyAccountsSummary(
+      makeInput({ sales: sales1000, expenses: [cat("FOOD_PURCHASES", 200), cat("BUTCHERY", 100)] })
+    );
+    expect(s.inventory.foodPurchases).toBe(300);
+    // ولا تُحسب مرتين في باقي التشغيلية
+    expect(s.profits.operationalExcludingFood).toBe(0);
+  });
+
+  it("الفحم والغاز ليست تكلفة طعام (طاقة وليست بضاعة)", () => {
+    const s = calculateMonthlyAccountsSummary(
+      makeInput({ sales: sales1000, expenses: [cat("CHARCOAL", 100), cat("GAS", 50)] })
+    );
+    expect(s.inventory.foodPurchases).toBe(0);
+    expect(s.profits.operationalExcludingFood).toBe(150);
+  });
+
+  it("سحب المالك لا يُخصم من الربح — توزيع وليس مصروف", () => {
+    const withDraw = calculateMonthlyAccountsSummary(
+      makeInput({ sales: sales1000, expenses: [cat("RENT", 200), cat("OWNER_DRAW", 500)] })
+    );
+    const withoutDraw = calculateMonthlyAccountsSummary(
+      makeInput({ sales: sales1000, expenses: [cat("RENT", 200)] })
+    );
+    expect(withDraw.profits.netProfitAfterInventory)
+      .toBe(withoutDraw.profits.netProfitAfterInventory);
+    expect(withDraw.profits.netProfitAfterInventory).toBe(800);
+    // لكن المبلغ يظهر في بند مستقل
+    expect(withDraw.recordedExpenses.excludedFromPL).toBe(500);
+  });
+
+  it("شراء المعدات لا يُحمّل على شهر واحد — مصروف رأسمالي", () => {
+    const s = calculateMonthlyAccountsSummary(
+      makeInput({ sales: sales1000, expenses: [cat("EQUIPMENT_ASSETS", 3000)] })
+    );
+    expect(s.profits.netProfitAfterInventory).toBe(1000); // لم يتأثر
+    expect(s.recordedExpenses.excludedFromPL).toBe(3000);
+  });
+
+  it("الاستبعاد يسري حتى لو صُنّف تشغيليًا بالخطأ", () => {
+    const s = calculateMonthlyAccountsSummary(
+      makeInput({ sales: sales1000, expenses: [cat("OWNER_DRAW", 400, "OPERATIONAL")] })
+    );
+    expect(s.recordedExpenses.operational).toBe(0);
+    expect(s.recordedExpenses.excludedFromPL).toBe(400);
+  });
+
+  it("Prime Cost = تكلفة الطعام + العمالة", () => {
+    const s = calculateMonthlyAccountsSummary(
+      makeInput({
+        sales: sales1000,
+        expenses: [cat("FOOD_PURCHASES", 300), cat("SALARIES", 250)],
+        openingInventory: 0, closingInventory: 0,
+      })
+    );
+    expect(s.inventory.foodCost).toBe(300);
+    expect(s.keyMetrics.labourCost).toBe(250);
+    expect(s.keyMetrics.primeCost).toBe(550);
+    expect(s.keyMetrics.primeCostPercentage).toBe(55);
+    expect(s.keyMetrics.labourCostPercentage).toBe(25);
+  });
+
+  it("Prime Cost مؤشر تحليلي فقط — لا يُخصم مرتين", () => {
+    const s = calculateMonthlyAccountsSummary(
+      makeInput({ sales: sales1000, expenses: [cat("FOOD_PURCHASES", 300), cat("SALARIES", 250)] })
+    );
+    // 1000 - 300 (طعام) - 250 (عمالة ضمن باقي التشغيلية)
+    expect(s.profits.netProfitAfterInventory).toBe(450);
+    // ولا تزال المعادلتان متطابقتين
+    expect(s.profits.netProfitAfterInventory).toBe(verifyNetProfit(s));
+  });
+
+  it("ينبّه على الدفعة الكبيرة التي تشوّه الشهر", () => {
+    const s = calculateMonthlyAccountsSummary(
+      makeInput({ sales: sales1000, expenses: [cat("RENT", 700), cat("GAS", 50)] })
+    );
+    expect(s.warnings.largeExpenses).toHaveLength(1);
+    expect(s.warnings.largeExpenses[0]).toMatchObject({ label: "RENT", amount: 700, shareOfSales: 70 });
+  });
+
+  it("لا تنبيهات عند صفر مبيعات (تجنّب القسمة على صفر)", () => {
+    const s = calculateMonthlyAccountsSummary(makeInput({ expenses: [cat("RENT", 700)] }));
+    expect(s.warnings.largeExpenses).toEqual([]);
+  });
+
+  it("المعادلتان تظلان متطابقتين مع البنود المستبعدة", () => {
+    const s = calculateMonthlyAccountsSummary(
+      makeInput({
+        sales: sales1000,
+        expenses: [cat("FOOD_PURCHASES", 300), cat("BUTCHERY", 100), cat("SALARIES", 200),
+                   cat("OWNER_DRAW", 500), cat("EQUIPMENT_ASSETS", 900),
+                   cat("TAXES", 50, "NON_OPERATIONAL")],
+        openingInventory: 120, closingInventory: 80,
+      })
+    );
+    expect(s.profits.netProfitAfterInventory).toBe(verifyNetProfit(s));
+    expect(s.recordedExpenses.excludedFromPL).toBe(1400);
+  });
+});
