@@ -717,6 +717,7 @@ export const monthlyAccountsRouter = router({
         expenseType: z.enum(EXPENSE_TYPES).nullable().optional(),
         expenseCategoryCode: z.enum(EXPENSE_CATEGORY_CODES).nullable().optional(),
         paymentMethod: z.enum(PAYMENT_METHODS).nullable().optional(),
+        amortizeMonths: z.number().int().min(1).max(60).optional(),
       })
     )
     .mutation(({ input }) => updateExpenseClassification(input)),

@@ -87,7 +87,10 @@ export default function MonthlySummary({
             onClick={() => onDrill("foodPurchases")}
           />
 
-          <Line label="مجمل الربح" amount={s.profits.grossProfitAfterFoodCost} sign="=" subtotal currency={currency} />
+          <Line
+            label={s.profits.grossProfitAfterFoodCost < 0 ? "مجمل الخسارة" : "مجمل الربح"}
+            amount={s.profits.grossProfitAfterFoodCost} sign="=" subtotal currency={currency}
+          />
 
           <Line
             label="الرواتب والأجور"
@@ -113,7 +116,10 @@ export default function MonthlySummary({
             onClick={() => onDrill("operationalExFood")}
           />
 
-          <Line label="الربح التشغيلي" amount={s.profits.operatingProfit} sign="=" subtotal currency={currency} />
+          <Line
+            label={s.profits.operatingProfit < 0 ? "الخسارة التشغيلية" : "الربح التشغيلي"}
+            amount={s.profits.operatingProfit} sign="=" subtotal currency={currency}
+          />
 
           {s.profits.nonOperationalExcludingFood > 0 && (
             <Line
@@ -234,10 +240,14 @@ function Line({
       : strong
         ? "font-semibold"
         : "";
-  const amountColor = result
+  // A subtotal that came out negative must LOOK negative. Rendering |amount|
+  // with no marker turned an operating loss of 562.06 into what read as a
+  // profit of the same size.
+  const isNegativeTotal = sign === "=" && amount < 0;
+  const amountColor = sign === "="
     ? amount > 0 ? "text-emerald-700 dark:text-emerald-400"
       : amount < 0 ? "text-rose-700 dark:text-rose-400" : ""
-    : sign === "−" ? "text-rose-600 dark:text-rose-400" : "";
+    : "text-rose-600 dark:text-rose-400";
 
   return (
     <div className={`flex items-center justify-between gap-3 px-4 py-2.5 ${rowClass}`}>
@@ -270,7 +280,8 @@ function Line({
           </span>
         )}
         <span className={`text-sm tabular-nums ${amountColor}`}>
-          {fmt(Math.abs(amount))} <span className="text-xs font-normal">{currency}</span>
+          {isNegativeTotal && "−"}{fmt(Math.abs(amount))}{" "}
+          <span className="text-xs font-normal">{currency}</span>
         </span>
       </span>
     </div>

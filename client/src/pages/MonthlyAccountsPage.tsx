@@ -136,6 +136,54 @@ function drillFilter(key: DrillKey): (e: ExpenseLike) => boolean {
   }
 }
 
+/**
+ * Spreads one invoice's cost across the months it actually covers.
+ *
+ * A quarter's rent or a year's licence paid in one go otherwise lands entirely
+ * on the month it was paid, making that month look catastrophic and the
+ * following ones artificially healthy. The same control depreciates equipment:
+ * a fridge over 36 months rather than in a single hit.
+ */
+function SpreadControl({
+  row, onChange,
+}: {
+  row: {
+    sourceType: string;
+    amortizeMonths?: number;
+    amortizePeriod?: number | null;
+    amortizeTotal?: number | null;
+  };
+  onChange: (months: number) => void;
+}) {
+  const spread = row.amortizeMonths ?? 1;
+  const canSpread = row.sourceType === "SUPPLIER_INVOICE" || row.sourceType === "FREE_INVOICE";
+  if (!canSpread) return null;
+
+  return (
+    <div className="mt-0.5">
+      {spread > 1 && row.amortizeTotal != null && (
+        <span className="block text-[10px] text-sky-700 dark:text-sky-400 font-normal">
+          قسط {row.amortizePeriod}/{spread} من {fmt(row.amortizeTotal)}
+        </span>
+      )}
+      <Select value={String(spread)} onValueChange={(v) => onChange(Number(v))}>
+        <SelectTrigger className="h-5 w-[86px] mx-auto text-[10px] px-1.5 font-normal opacity-60 hover:opacity-100 focus:opacity-100 data-[state=open]:opacity-100">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="1" className="text-xs">شهر واحد</SelectItem>
+          <SelectItem value="3" className="text-xs">3 شهور</SelectItem>
+          <SelectItem value="6" className="text-xs">6 شهور</SelectItem>
+          <SelectItem value="12" className="text-xs">12 شهر</SelectItem>
+          <SelectItem value="24" className="text-xs">24 شهر</SelectItem>
+          <SelectItem value="36" className="text-xs">36 شهر</SelectItem>
+          <SelectItem value="60" className="text-xs">60 شهر</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 export default function MonthlyAccountsPage() {
   const today = new Date();
   const { user } = useAuth();
@@ -821,7 +869,12 @@ export default function MonthlyAccountsPage() {
                                   <span className="text-xs opacity-50">—</span>
                                 )}
                               </td>
-                              <td className="px-2 py-1.5 text-center font-semibold whitespace-nowrap">{fmt(e.total)}</td>
+                              <td className="px-2 py-1.5 text-center font-semibold whitespace-nowrap">
+                                {fmt(e.total)}
+                                <SpreadControl row={e} onChange={(n) => updateClassification.mutate({
+                                  id: e.id, sourceType: e.sourceType as any, amortizeMonths: n,
+                                })} />
+                              </td>
                               <td className="px-2 py-1.5 text-center text-emerald-700 dark:text-emerald-400 whitespace-nowrap">{fmt(e.paid)}</td>
                               <td className="px-2 py-1.5 text-center text-amber-700 dark:text-amber-400 whitespace-nowrap">{fmt(e.remaining)}</td>
                               <td className="px-2 py-1.5 text-center whitespace-nowrap">

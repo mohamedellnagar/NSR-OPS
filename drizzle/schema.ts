@@ -239,6 +239,12 @@ export const invoices = mysqlTable(
       "CHARCOAL", "BUTCHERY", "OTHER",
     ]),
     paymentMethod: mysqlEnum("paymentMethod", ["CASH", "BANK_TRANSFER", "CARD", "CHEQUE", "OTHER"]),
+    /**
+     * Spread this invoice's cost over N months starting from its own month.
+     * 1 = charge it entirely to its own month. Used both for prepayments
+     * (rent covering a quarter) and for depreciating equipment.
+     */
+    amortizeMonths: smallint("amortizeMonths").notNull().default(1),
     stockUpdated: boolean("stockUpdated").default(false).notNull(),
     postToInventory: boolean("postToInventory").notNull().default(false),
     createdBy: int("createdBy").references(() => users.id),
@@ -771,6 +777,12 @@ export const freeInvoices = mysqlTable("free_invoices", {
     "CHARCOAL", "BUTCHERY", "OTHER",
   ]),
   paymentMethod: mysqlEnum("paymentMethod", ["CASH", "BANK_TRANSFER", "CARD", "CHEQUE", "OTHER"]),
+  /**
+   * Spread this invoice's cost over N months starting from its own month.
+   * 1 = charge it entirely to its own month. Used both for prepayments
+   * (rent covering a quarter) and for depreciating equipment.
+   */
+  amortizeMonths: smallint("amortizeMonths").notNull().default(1),
   paidAt: timestamp("paidAt"),
   notes: text("notes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

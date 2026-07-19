@@ -86,6 +86,12 @@ export interface UnifiedExpenseRow {
   paid: number;
   remaining: number;
   paymentStatus: string | null;
+  /** How many months this invoice's cost is spread across. 1 = just its own. */
+  amortizeMonths?: number;
+  /** Which instalment this row is, 1-based. null when not spread. */
+  amortizePeriod?: number | null;
+  /** The full invoice value, when only an instalment of it is shown. */
+  amortizeTotal?: number | null;
   needsClassification: boolean;
   /** Daily expenses live on daily_accounts and are not classifiable rows. */
   editable: boolean;
@@ -174,28 +180,44 @@ export async function getMonthlyAccounts(
       [start, end]
     );
 
-    // ── 2. Supplier invoices (by INVOICE date, not payment date) ──
+    // ── 2/3. Invoices charged to this month ──
+    //
+    // An invoice normally belongs to its own month (amortizeMonths = 1). When it
+    // is spread, it also lands on the following N-1 months with 1/N of its value
+    // each, so a quarter's rent is matched to the quarter it covers and a piece
+    // of equipment is depreciated instead of wiping out the month it was bought.
+    //
+    // PERIOD_DIFF counts months between two YYYYMM periods, so an invoice is in
+    // scope when this month is between its own month and N-1 months after it.
+    const periodKey = year * 100 + month;
+    const AMORTIZE_SCOPE = (dateCol: string) => `
+      PERIOD_DIFF(?, CAST(DATE_FORMAT(CONVERT_TZ(${dateCol}, '+00:00', '${TZ}'), '%Y%m') AS UNSIGNED))
+        BETWEEN 0 AND GREATEST(amortizeMonths, 1) - 1`;
+
     const [supplierRows] = await conn.execute<any[]>(
       `SELECT id, invoiceNumber, supplierName, notes,
               DATE_FORMAT(CONVERT_TZ(invoiceDate, '+00:00', '${TZ}'), '%Y-%m-%d') AS dateKey,
               totalAmount, paidAmount, remainingAmount, paymentStatus,
-              expenseCategory, expenseType, expenseCategoryCode, paymentMethod
+              expenseCategory, expenseType, expenseCategoryCode, paymentMethod,
+              GREATEST(amortizeMonths, 1) AS amortizeMonths,
+              PERIOD_DIFF(?, CAST(DATE_FORMAT(CONVERT_TZ(invoiceDate, '+00:00', '${TZ}'), '%Y%m') AS UNSIGNED)) AS periodOffset
          FROM invoices
-        WHERE DATE(CONVERT_TZ(invoiceDate, '+00:00', '${TZ}')) BETWEEN ? AND ?
+        WHERE ${AMORTIZE_SCOPE("invoiceDate")}
         ORDER BY invoiceDate, id`,
-      [start, end]
+      [periodKey, periodKey]
     );
 
-    // ── 3. Free invoices ──
     const [freeRows] = await conn.execute<any[]>(
       `SELECT id, invoiceNumber, supplierName, notes,
               DATE_FORMAT(CONVERT_TZ(date, '+00:00', '${TZ}'), '%Y-%m-%d') AS dateKey,
               totalAmount, paidAmount, remainingAmount, paymentStatus,
-              expenseCategory, expenseType, expenseCategoryCode, paymentMethod
+              expenseCategory, expenseType, expenseCategoryCode, paymentMethod,
+              GREATEST(amortizeMonths, 1) AS amortizeMonths,
+              PERIOD_DIFF(?, CAST(DATE_FORMAT(CONVERT_TZ(date, '+00:00', '${TZ}'), '%Y%m') AS UNSIGNED)) AS periodOffset
          FROM free_invoices
-        WHERE DATE(CONVERT_TZ(date, '+00:00', '${TZ}')) BETWEEN ? AND ?
+        WHERE ${AMORTIZE_SCOPE("date")}
         ORDER BY date, id`,
-      [start, end]
+      [periodKey, periodKey]
     );
 
     // ── 4. Monthly payments (selected by month/year columns, not a date) ──
@@ -236,17 +258,37 @@ export async function getMonthlyAccounts(
     );
 
     // ── Unify expenses ──
+    const monthStart = `${year}-${String(month).padStart(2, "0")}-01`;
+
     const mapInvoice = (r: any, sourceType: ExpenseSourceType): UnifiedExpenseRow => {
       const cls = resolveClassification(r);
-      const total = num(r.totalAmount);
-      const paid = num(r.paidAmount);
-      const storedRemaining = num(r.remainingAmount);
+      const invoiceTotal = num(r.totalAmount);
+      const spread = Math.max(1, Math.trunc(num(r.amortizeMonths) || 1));
+      const offset = Math.max(0, Math.trunc(num(r.periodOffset) || 0));
+
+      // Only the slice belonging to this month reaches the P&L. The last slice
+      // absorbs the rounding remainder so the instalments always add back up to
+      // the invoice exactly, however awkwardly it divides.
+      const slice = spread === 1
+        ? invoiceTotal
+        : offset === spread - 1
+          ? money(invoiceTotal - money(invoiceTotal / spread) * (spread - 1))
+          : money(invoiceTotal / spread);
+
+      const total = slice;
+      const paid = spread === 1 ? num(r.paidAmount) : slice;
+      const storedRemaining = spread === 1 ? num(r.remainingAmount) : 0;
       const remaining = storedRemaining > 0 ? storedRemaining : Math.max(0, total - paid);
       return {
         id: r.id,
         sourceType,
         invoiceNumber: r.invoiceNumber ?? null,
-        date: r.dateKey,
+        // A carried-over instalment has no day inside this month, so it sits on
+        // the first — it belongs to the period, not to a date.
+        date: offset === 0 ? r.dateKey : monthStart,
+        amortizeMonths: spread,
+        amortizePeriod: spread === 1 ? null : offset + 1,
+        amortizeTotal: spread === 1 ? null : money(invoiceTotal),
         vendorName: r.supplierName ?? null,
         description: r.notes ?? null,
         expenseType: cls.expenseType,
@@ -500,6 +542,7 @@ export async function updateExpenseClassification(input: {
   expenseType?: ExpenseType | null;
   expenseCategoryCode?: ExpenseCategoryCode | null;
   paymentMethod?: string | null;
+  amortizeMonths?: number;
 }): Promise<{ success: true }> {
   if (input.sourceType === "DAILY_EXPENSE") {
     throw new Error("المصروفات اليومية لا تقبل التصنيف من هذه الصفحة");
@@ -511,6 +554,10 @@ export async function updateExpenseClassification(input: {
   };
   const table = TABLE_BY_SOURCE[input.sourceType];
   if (!table) throw new Error("مصدر غير معروف");
+
+  if (input.amortizeMonths !== undefined && table === "monthly_payments") {
+    throw new Error("الدفعات الشهرية متكررة بطبيعتها ولا تُوزَّع");
+  }
 
   const sets: string[] = [];
   const params: unknown[] = [];
@@ -525,6 +572,16 @@ export async function updateExpenseClassification(input: {
   if (input.paymentMethod !== undefined) {
     sets.push("paymentMethod = ?");
     params.push(input.paymentMethod);
+  }
+  if (input.amortizeMonths !== undefined) {
+    // A five-year spread is already generous for kitchen equipment; anything
+    // beyond that is a typo, and it would keep the invoice in scope forever.
+    const n = Math.trunc(input.amortizeMonths);
+    if (!Number.isFinite(n) || n < 1 || n > 60) {
+      throw new Error("عدد شهور التوزيع يجب أن يكون بين 1 و 60");
+    }
+    sets.push("amortizeMonths = ?");
+    params.push(n);
   }
   if (sets.length === 0) return { success: true };
 
