@@ -38,6 +38,7 @@ import {
 import DeleteMonthDialog from "@/components/DeleteMonthDialog";
 import SalesImportDialog from "@/components/SalesImportDialog";
 import ExpenseDetailsDialog, { type ExpenseRowRef } from "@/components/ExpenseDetailsDialog";
+import MonthlySummary from "@/components/MonthlySummary";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -133,51 +134,6 @@ function drillFilter(key: DrillKey): (e: ExpenseLike) => boolean {
     case "nonOperationalExFood": return (e) => e.expenseType === "NON_OPERATIONAL" && !isFood(e);
     case "unclassified": return (e) => !e.expenseType;
   }
-}
-
-/** A row in the summary: optional formula tooltip, optional drill-down. */
-function SummaryRow({
-  label, value, currency, formula, onClick, strong, tone, prefix,
-}: {
-  label: string; value: string; currency?: string; formula?: string;
-  onClick?: () => void; strong?: boolean; tone?: "profit" | "loss" | "neutral"; prefix?: string;
-}) {
-  const toneClass =
-    tone === "profit" ? "text-emerald-700 dark:text-emerald-400"
-    : tone === "loss" ? "text-rose-700 dark:text-rose-400"
-    : "";
-  const text = `${prefix ? prefix + " " : ""}${value}${currency ? " " + currency : ""}`;
-  return (
-    <div className={`flex items-center justify-between gap-2 py-2 border-b last:border-b-0 ${strong ? "font-bold" : ""}`}>
-      <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-        {label}
-        {formula && (
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button type="button" aria-label={`معادلة ${label}`} className="opacity-60 hover:opacity-100">
-                  <Info className="w-3.5 h-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="left" className="max-w-[300px] text-right whitespace-pre-line">
-                {formula}
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </span>
-      {onClick ? (
-        <button
-          type="button" onClick={onClick}
-          className={`text-sm tabular-nums underline decoration-dotted underline-offset-4 hover:opacity-70 ${toneClass}`}
-        >
-          {text}
-        </button>
-      ) : (
-        <span className={`text-sm tabular-nums ${toneClass}`}>{text}</span>
-      )}
-    </div>
-  );
 }
 
 export default function MonthlyAccountsPage() {
@@ -317,18 +273,6 @@ export default function MonthlyAccountsPage() {
 
   const hasFilters =
     search.trim() !== "" || [fType, fCategory, fSource, fStatus].some((v) => v !== SENTINEL_ALL);
-
-  const netProfit = summary?.profits.netProfitAfterInventory ?? 0;
-
-  /**
-   * Profit lines never render a bare negative number — a loss is shown as
-   * "خسارة 1,234.00" in red, a profit as "ربح 1,234.00" in green.
-   */
-  const profitProps = (n: number) => ({
-    value: fmt(Math.abs(n)),
-    prefix: n > 0 ? "ربح" : n < 0 ? "خسارة" : "",
-    tone: (n > 0 ? "profit" : n < 0 ? "loss" : "neutral") as "profit" | "loss" | "neutral",
-  });
 
   return (
     <div className="p-4 md:p-6 space-y-6" dir="rtl">
@@ -550,113 +494,11 @@ export default function MonthlyAccountsPage() {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <CardContent className="pt-0">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-6">
-                    {/* ── Group 1: activity ── */}
-                    <div>
-                      <h3 className="text-sm font-bold mb-2 pb-2 border-b-2 border-violet-400">ملخص النشاط</h3>
-                      <SummaryRow label="إجمالي المبيعات" value={fmt(summary.sales.totalSales)} currency={currency} />
-                      <SummaryRow label="إجمالي الخصومات" value={fmt(summary.sales.totalDiscounts)} currency={currency} />
-                      <SummaryRow
-                        label="صافي المبيعات" value={fmt(summary.sales.netSales)} currency={currency} strong
-                        formula={"صافي المبيعات =\nإجمالي المبيعات − إجمالي الخصومات"}
-                      />
-                      <SummaryRow
-                        label="المصروفات التشغيلية" value={fmt(summary.recordedExpenses.operational)} currency={currency}
-                        onClick={() => setDrill("operational")}
-                      />
-                      <SummaryRow
-                        label="المصروفات غير التشغيلية" value={fmt(summary.recordedExpenses.nonOperational)} currency={currency}
-                        onClick={() => setDrill("nonOperational")}
-                      />
-                      {summary.recordedExpenses.unclassified > 0 && (
-                        <SummaryRow
-                          label="مصروفات غير مصنفة (خارج النتائج)"
-                          value={fmt(summary.recordedExpenses.unclassified)} currency={currency}
-                          onClick={() => setDrill("unclassified")}
-                        />
-                      )}
-                      {summary.recordedExpenses.excludedFromPL > 0 && (
-                        <SummaryRow
-                          label="سحب مالك ومشتريات أصول (خارج الأرباح)"
-                          value={fmt(summary.recordedExpenses.excludedFromPL)} currency={currency}
-                          formula={"سحب المالك توزيع أرباح وليس مصروفًا،\nوشراء الأصول مصروف رأسمالي يُستهلك على سنوات.\nلذلك لا يُخصم أي منهما من ربح الشهر."}
-                        />
-                      )}
-                      <SummaryRow
-                        label="إجمالي المصروفات المسجلة" value={fmt(summary.recordedExpenses.totalRecorded)}
-                        currency={currency} strong
-                        formula={"إجمالي المصروفات المسجلة =\nالتشغيلية + غير التشغيلية\n\n(المصروفات غير المصنفة غير داخلة)"}
-                      />
-                      <SummaryRow
-                        label="الربح قبل تسوية المخزون" currency={currency} strong
-                        {...profitProps(summary.profits.profitBeforeInventory)}
-                        formula={"الربح قبل تسوية المخزون =\nصافي المبيعات − إجمالي المصروفات المسجلة"}
-                      />
-                    </div>
-
-                    {/* ── Group 2: inventory settlement & result ── */}
-                    <div>
-                      <h3 className="text-sm font-bold mb-2 pb-2 border-b-2 border-emerald-400">تسوية المخزون والنتيجة</h3>
-                      <SummaryRow label="مخزون أول الشهر" value={fmt(summary.inventory.openingInventory)} currency={currency} />
-                      <SummaryRow
-                        label="مشتريات الطعام" value={fmt(summary.inventory.foodPurchases)} currency={currency}
-                        onClick={() => setDrill("foodPurchases")}
-                      />
-                      <SummaryRow label="مخزون آخر الشهر" value={fmt(summary.inventory.closingInventory)} currency={currency} />
-                      <SummaryRow
-                        label="تكلفة الطعام الفعلية" value={fmt(summary.inventory.foodCost)} currency={currency} strong
-                        formula={"تكلفة الطعام =\nمخزون أول الشهر + مشتريات الطعام − مخزون آخر الشهر"}
-                      />
-                      <SummaryRow
-                        label="نسبة تكلفة الطعام" value={pct(summary.inventory.foodCostPercentage)}
-                        formula={"نسبة تكلفة الطعام =\nتكلفة الطعام ÷ صافي المبيعات × 100"}
-                      />
-                      <SummaryRow
-                        label="تكلفة العمالة" value={fmt(summary.keyMetrics.labourCost)} currency={currency}
-                        formula={"الرواتب والأجور.\nالمعدل الصحي في المطاعم: 25–35% من صافي المبيعات."}
-                      />
-                      <SummaryRow
-                        label="نسبة العمالة" value={pct(summary.keyMetrics.labourCostPercentage)}
-                        tone={summary.keyMetrics.labourCostPercentage > 35 ? "loss" : "neutral"}
-                      />
-                      <SummaryRow
-                        label="التكلفة الأولية (Prime Cost)" value={fmt(summary.keyMetrics.primeCost)}
-                        currency={currency} strong
-                        formula={"التكلفة الأولية = تكلفة الطعام + تكلفة العمالة.\n\nأهم مؤشر في تشغيل المطاعم.\nالمعدل الصحي: 55–65% من صافي المبيعات.\n\nمؤشر تحليلي — غير مخصوم مرتين."}
-                      />
-                      <SummaryRow
-                        label="نسبة التكلفة الأولية" value={pct(summary.keyMetrics.primeCostPercentage)}
-                        strong
-                        tone={summary.keyMetrics.primeCostPercentage > 65 ? "loss"
-                          : summary.keyMetrics.primeCostPercentage > 0 ? "profit" : "neutral"}
-                      />
-                      <SummaryRow label="مجمل الربح بعد تكلفة الطعام" currency={currency} {...profitProps(summary.profits.grossProfitAfterFoodCost)} />
-                      <SummaryRow
-                        label="باقي المصروفات التشغيلية" value={fmt(summary.profits.operationalExcludingFood)} currency={currency}
-                        onClick={() => setDrill("operationalExFood")}
-                      />
-                      <SummaryRow
-                        label="باقي المصروفات غير التشغيلية" value={fmt(summary.profits.nonOperationalExcludingFood)} currency={currency}
-                        onClick={() => setDrill("nonOperationalExFood")}
-                      />
-                      <SummaryRow label="الربح التشغيلي" currency={currency} {...profitProps(summary.profits.operatingProfit)} />
-                      <SummaryRow
-                        label="إجمالي المصروفات بعد التسوية" value={fmt(summary.profits.adjustedTotalExpenses)} currency={currency}
-                        formula={"إجمالي المصروفات بعد التسوية =\nتكلفة الطعام + باقي التشغيلية + باقي غير التشغيلية\n\n(مشتريات الطعام لا تُحتسب مرة أخرى)"}
-                      />
-                      <SummaryRow
-                        label="صافي الربح أو الخسارة" currency={currency} strong
-                        {...profitProps(netProfit)}
-                        formula={"صافي الربح =\nصافي المبيعات − تكلفة الطعام − باقي التشغيلية − باقي غير التشغيلية\n\nتحقق بديل:\nالربح قبل التسوية + مشتريات الطعام − تكلفة الطعام"}
-                      />
-                      <SummaryRow label="هامش صافي الربح" value={pct(summary.profits.netProfitMargin)} tone={profitProps(netProfit).tone} />
-                      <SummaryRow label="أكل الموظفين" value={fmt(summary.staffMeals.total)} currency={currency} />
-                      <SummaryRow
-                        label="نسبة أكل الموظفين" value={pct(summary.staffMeals.percentage)}
-                        formula={"مؤشر تحليلي فقط — غير مخصوم من صافي الربح،\nلأنه مستهلك من نفس مخزون الطعام."}
-                      />
-                    </div>
-                  </div>
+                  <MonthlySummary
+                    summary={summary}
+                    currency={currency}
+                    onDrill={(k) => setDrill(k)}
+                  />
                 </CardContent>
               </CollapsibleContent>
             </Card>
