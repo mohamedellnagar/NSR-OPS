@@ -26,7 +26,7 @@ import {
 import {
   CalendarDays, ChevronDown, ChevronLeft, ChevronRight, RefreshCw, Receipt,
   Search, TrendingUp, AlertTriangle, Info, Settings2, Save, Calculator,
-  Sparkles, CheckCircle2, CalendarX, Upload, Trash2,
+  Sparkles, CheckCircle2, CalendarX, Upload, Trash2, Eye,
 } from "lucide-react";
 import {
   EXPENSE_TYPES, EXPENSE_TYPE_LABELS, EXPENSE_TYPE_UNSET_LABEL,
@@ -37,6 +37,7 @@ import {
 } from "@shared/expenseClassification";
 import DeleteMonthDialog from "@/components/DeleteMonthDialog";
 import SalesImportDialog from "@/components/SalesImportDialog";
+import ExpenseDetailsDialog, { type ExpenseRowRef } from "@/components/ExpenseDetailsDialog";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -193,6 +194,7 @@ export default function MonthlyAccountsPage() {
   const [drill, setDrill] = useState<DrillKey | null>(null);
   const [showDeleteMonth, setShowDeleteMonth] = useState(false);
   const [showSalesImport, setShowSalesImport] = useState(false);
+  const [detailsRow, setDetailsRow] = useState<ExpenseRowRef>(null);
   const [rowToDelete, setRowToDelete] = useState<ExpenseRow | null>(null);
 
   // Expense table filters — client-side, so they never affect the summary.
@@ -942,6 +944,16 @@ export default function MonthlyAccountsPage() {
                                 )}
                               </td>
                               <td className="px-2 py-1.5 text-center">
+                                <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setDetailsRow({ sourceType: e.sourceType, id: e.id, date: e.date })}
+                                  className="text-blue-600 hover:text-blue-800 dark:hover:text-blue-400"
+                                  title="عرض بنود الفاتورة"
+                                  aria-label="عرض"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
                                 {canEdit && (
                                   <button
                                     type="button"
@@ -956,6 +968,7 @@ export default function MonthlyAccountsPage() {
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 )}
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -1031,6 +1044,12 @@ export default function MonthlyAccountsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ExpenseDetailsDialog
+        row={detailsRow}
+        onOpenChange={(o) => !o && setDetailsRow(null)}
+        currency={currency}
+      />
 
       <SalesImportDialog
         open={showSalesImport}

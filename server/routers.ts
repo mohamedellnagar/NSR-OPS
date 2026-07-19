@@ -251,6 +251,7 @@ import {
   getMonthlyAccounts,
   updateExpenseClassification,
   getMonthlyAccountSettings,
+  getExpenseRowDetails,
   saveMonthlyAccountSettings,
 } from "./monthly-accounts-db";
 import { classifyExpensesWithAI } from "./aiExpenseClassifier";
@@ -587,6 +588,16 @@ export const monthlyAccountsRouter = router({
       })
     )
     .query(({ input }) => getMonthlyAccounts(input.year, input.month)),
+
+  expenseRowDetails: protectedProcedure
+    .input(
+      z.object({
+        sourceType: z.enum(EXPENSE_SOURCE_TYPES),
+        id: z.number().int().optional(),
+        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+      })
+    )
+    .query(({ input }) => getExpenseRowDetails(input)),
 
   getSettings: protectedProcedure
     .input(

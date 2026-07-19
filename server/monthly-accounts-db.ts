@@ -540,3 +540,150 @@ export async function updateExpenseClassification(input: {
     conn.release();
   }
 }
+
+// ─── Row details (line items) ─────────────────────────────────────────────────
+export interface ExpenseRowDetails {
+  sourceType: ExpenseSourceType;
+  id: number;
+  invoiceNumber: string | null;
+  vendorName: string | null;
+  date: string;
+  notes: string | null;
+  total: number;
+  paid: number;
+  remaining: number;
+  paymentStatus: string | null;
+  expenseType: ExpenseType | null;
+  expenseCategoryCode: ExpenseCategoryCode | null;
+  paymentMethod: string | null;
+  items: Array<{ description: string; qty: number; unit: string | null; unitPrice: number; total: number }>;
+  /** Sources that genuinely have no line items, so the UI can say why. */
+  itemsUnavailableReason: string | null;
+}
+
+/**
+ * Loads one expense row with its line items, for the details popup.
+ * Two queries at most; monthly payments and daily expenses have no item rows
+ * to fetch, which is reported rather than shown as an empty table.
+ */
+export async function getExpenseRowDetails(input: {
+  sourceType: ExpenseSourceType;
+  id?: number;
+  date?: string;
+}): Promise<ExpenseRowDetails> {
+  const conn = await getConn();
+  try {
+    if (input.sourceType === "SUPPLIER_INVOICE") {
+      const [[inv]] = (await conn.execute(
+        `SELECT id, invoiceNumber, supplierName, notes, totalAmount, paidAmount, remainingAmount,
+                paymentStatus, expenseType, expenseCategoryCode, paymentMethod,
+                DATE_FORMAT(CONVERT_TZ(invoiceDate,'+00:00','${TZ}'),'%Y-%m-%d') AS dateKey
+           FROM invoices WHERE id = ?`,
+        [input.id]
+      )) as any;
+      if (!inv) throw new Error("الفاتورة غير موجودة");
+
+      const [items] = await conn.execute<any[]>(
+        `SELECT materialName AS description, quantity AS qty, materialUnit AS unit,
+                unitPrice, totalPrice AS total
+           FROM invoice_items WHERE invoiceId = ? ORDER BY id`,
+        [input.id]
+      );
+
+      return {
+        sourceType: "SUPPLIER_INVOICE", id: inv.id,
+        invoiceNumber: inv.invoiceNumber ?? null, vendorName: inv.supplierName ?? null,
+        date: inv.dateKey, notes: inv.notes ?? null,
+        total: num(inv.totalAmount), paid: num(inv.paidAmount),
+        remaining: num(inv.remainingAmount), paymentStatus: inv.paymentStatus ?? null,
+        expenseType: inv.expenseType ?? null, expenseCategoryCode: inv.expenseCategoryCode ?? null,
+        paymentMethod: inv.paymentMethod ?? null,
+        items: (items as any[]).map((i) => ({
+          description: i.description ?? "—", qty: num(i.qty), unit: i.unit ?? null,
+          unitPrice: num(i.unitPrice), total: num(i.total),
+        })),
+        itemsUnavailableReason: null,
+      };
+    }
+
+    if (input.sourceType === "FREE_INVOICE") {
+      const [[inv]] = (await conn.execute(
+        `SELECT id, invoiceNumber, supplierName, notes, totalAmount, paidAmount, remainingAmount,
+                paymentStatus, expenseType, expenseCategoryCode, paymentMethod,
+                DATE_FORMAT(CONVERT_TZ(date,'+00:00','${TZ}'),'%Y-%m-%d') AS dateKey
+           FROM free_invoices WHERE id = ?`,
+        [input.id]
+      )) as any;
+      if (!inv) throw new Error("الفاتورة غير موجودة");
+
+      const [items] = await conn.execute<any[]>(
+        `SELECT description, qty, unitPrice, total
+           FROM free_invoice_items WHERE invoiceId = ? ORDER BY id`,
+        [input.id]
+      );
+
+      return {
+        sourceType: "FREE_INVOICE", id: inv.id,
+        invoiceNumber: inv.invoiceNumber ?? null, vendorName: inv.supplierName ?? null,
+        date: inv.dateKey, notes: inv.notes ?? null,
+        total: num(inv.totalAmount), paid: num(inv.paidAmount),
+        remaining: num(inv.remainingAmount), paymentStatus: inv.paymentStatus ?? null,
+        expenseType: inv.expenseType ?? null, expenseCategoryCode: inv.expenseCategoryCode ?? null,
+        paymentMethod: inv.paymentMethod ?? null,
+        items: (items as any[]).map((i) => ({
+          description: i.description ?? "—", qty: num(i.qty), unit: null,
+          unitPrice: num(i.unitPrice), total: num(i.total),
+        })),
+        itemsUnavailableReason: null,
+      };
+    }
+
+    if (input.sourceType === "MONTHLY_PAYMENT") {
+      const [[p]] = (await conn.execute(
+        `SELECT id, name, category, notes, totalAmount, paidAmount, dueDay, recurrence, status,
+                expenseType, expenseCategoryCode, paymentMethod, year, month
+           FROM monthly_payments WHERE id = ?`,
+        [input.id]
+      )) as any;
+      if (!p) throw new Error("الدفعة غير موجودة");
+
+      const total = num(p.totalAmount), paid = num(p.paidAmount);
+      const lastDay = new Date(p.year, p.month, 0).getDate();
+      const day = Math.min(Math.max(Number(p.dueDay) || 1, 1), lastDay);
+
+      return {
+        sourceType: "MONTHLY_PAYMENT", id: p.id,
+        invoiceNumber: null, vendorName: p.name ?? null,
+        date: `${p.year}-${String(p.month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+        notes: p.notes ?? null,
+        total, paid, remaining: Math.max(0, total - paid),
+        paymentStatus: total - paid <= 0 && total > 0 ? "paid" : paid > 0 ? "partial" : "deferred",
+        expenseType: p.expenseType ?? null, expenseCategoryCode: p.expenseCategoryCode ?? null,
+        paymentMethod: p.paymentMethod ?? null,
+        items: [],
+        itemsUnavailableReason: "الدفعات الشهرية مبلغ واحد وليست فاتورة ببنود",
+      };
+    }
+
+    // DAILY_EXPENSE — the fixed-expense figure on a daily_accounts row.
+    const [[d]] = (await conn.execute(
+      `SELECT accountDate, expensesFixed FROM daily_accounts WHERE accountDate = ?`,
+      [input.date]
+    )) as any;
+    if (!d) throw new Error("اليوم غير موجود");
+    const amount = num(d.expensesFixed);
+
+    return {
+      sourceType: "DAILY_EXPENSE", id: 0,
+      invoiceNumber: null, vendorName: null, date: d.accountDate,
+      notes: "مصروفات ثابتة مسجّلة يدويًا في الحسابات اليومية",
+      total: amount, paid: amount, remaining: 0, paymentStatus: "paid",
+      expenseType: "OPERATIONAL", expenseCategoryCode: null, paymentMethod: null,
+      items: [],
+      itemsUnavailableReason:
+        "هذا مبلغ إجمالي مُدخل يدويًا في خانة «المصروفات الثابتة»، وليس فاتورة ببنود",
+    };
+  } finally {
+    conn.release();
+  }
+}
