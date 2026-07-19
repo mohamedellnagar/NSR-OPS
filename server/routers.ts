@@ -257,6 +257,7 @@ import { classifyExpensesWithAI } from "./aiExpenseClassifier";
 import { importExpensesFromExcel, buildExpenseImportTemplate } from "./expense-import";
 import { previewMonthDeletion, deleteMonthInvoices, deleteExpenseRow } from "./invoice-bulk-delete";
 import { importSalesFromExcel, buildSalesImportTemplate } from "./sales-import";
+import { businessDayInstant } from "@shared/monthlyAccountsSummary";
 import {
   EXPENSE_TYPES,
   EXPENSE_CATEGORY_CODES,
@@ -3622,7 +3623,7 @@ export const appRouter = router({
         const invoiceId = await createFreeInvoice({
           ...input,
           date: new Date(input.date),
-          paidAt: input.paidAt ? new Date(input.paidAt) : undefined,
+          paidAt: input.paidAt ? businessDayInstant(new Date(input.paidAt)) : undefined,
         });
         return invoiceId;
       }),

@@ -18,6 +18,7 @@
  */
 import * as XLSX from "xlsx";
 import { getConn } from "./pool";
+import { businessDayInstant } from "@shared/monthlyAccountsSummary";
 import { createFreeInvoice } from "./db";
 import {
   EXPENSE_CATEGORY_CODES,
@@ -345,7 +346,9 @@ export async function importExpensesFromExcel(input: {
             row.expenseType,
             row.expenseCategoryCode,
             row.paymentMethod,
-            row.date,
+            // Midday Dubai, not midnight: the daily view shifts by -6h for the
+            // business day, so a midnight timestamp lands on the previous day.
+            businessDayInstant(row.date),
             invoiceId,
           ]
         );

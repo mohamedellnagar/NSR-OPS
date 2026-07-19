@@ -270,3 +270,23 @@ export function verifyNetProfit(summary: MonthlyAccountsSummary): number {
       summary.inventory.foodCost
   );
 }
+
+/**
+ * A date-only value (an invoice date) turned into an instant that safely lands
+ * on THAT day once the business-day rule is applied.
+ *
+ * The daily view resolves a day as:
+ *   DATE( CONVERT_TZ(paidAt,'+00:00','+04:00') - INTERVAL 6 HOUR )
+ *
+ * so UTC midnight becomes 04:00 Dubai, minus 6h = 22:00 the PREVIOUS day, and
+ * the record shows up a day early. 08:00 UTC (noon in Dubai) maps back to
+ * 06:00 on the intended day — comfortably inside it, and far from both edges.
+ */
+export function businessDayInstant(dateOnly: Date): Date {
+  return new Date(Date.UTC(
+    dateOnly.getUTCFullYear(),
+    dateOnly.getUTCMonth(),
+    dateOnly.getUTCDate(),
+    8, 0, 0
+  ));
+}

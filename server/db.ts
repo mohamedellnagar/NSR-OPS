@@ -8,6 +8,7 @@ export function clean<T extends Record<string, any>>(obj: T): Partial<T> {
   ) as Partial<T>;
 }
 import { drizzle } from "drizzle-orm/mysql2";
+import { businessDayInstant } from "@shared/monthlyAccountsSummary";
 import * as bcrypt from "bcryptjs";
 import {
   appSettings,
@@ -855,7 +856,7 @@ export async function createInvoice(input: CreateInvoiceInput) {
     totalAmount: String(totalAmount.toFixed(3)),
     paymentStatus: input.paymentStatus as any,
     paidAt: input.paymentStatus === "paid" || input.paymentStatus === "partial"
-      ? (input.paidAt ?? input.invoiceDate)
+      ? (input.paidAt ?? businessDayInstant(input.invoiceDate))
       : null,
     paidAmount: String((input.paidAmount ?? 0).toFixed(3)),
     remainingAmount: input.paymentStatus === "paid" ? "0.000" : String(totalAmount.toFixed(3)),
@@ -4485,7 +4486,7 @@ export async function createFreeInvoice(data: {
     paymentStatus: data.paymentStatus,
     paidAmount: data.paidAmount != null ? data.paidAmount.toFixed(3) : "0",
     remainingAmount: initialRemainingAmount.toFixed(3),
-    paidAt: isPaid ? (data.paidAt ?? data.date) : undefined,
+    paidAt: isPaid ? (data.paidAt ?? businessDayInstant(data.date)) : undefined,
     expenseCategory: data.expenseCategory ?? "other",
     notes: data.notes,
   });
