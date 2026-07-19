@@ -39,6 +39,7 @@ import DeleteMonthDialog from "@/components/DeleteMonthDialog";
 import SalesImportDialog from "@/components/SalesImportDialog";
 import ExpenseDetailsDialog, { type ExpenseRowRef } from "@/components/ExpenseDetailsDialog";
 import MonthlySummary from "@/components/MonthlySummary";
+import AccountsOverview from "@/components/AccountsOverview";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -196,6 +197,10 @@ export default function MonthlyAccountsPage() {
   const [salesOpen, setSalesOpen] = useState(false);
   const [expensesOpen, setExpensesOpen] = useState(false);
   const [drill, setDrill] = useState<DrillKey | null>(null);
+  const [view, setView] = useState<"month" | "overview">("month");
+  const overview = trpc.monthlyAccounts.overview.useQuery(undefined, {
+    enabled: view === "overview",
+  });
   const [showDeleteMonth, setShowDeleteMonth] = useState(false);
   const [showSalesImport, setShowSalesImport] = useState(false);
   const [detailsRow, setDetailsRow] = useState<ExpenseRowRef>(null);
@@ -336,7 +341,20 @@ export default function MonthlyAccountsPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-3 bg-muted/40 rounded-xl px-4 py-2 w-fit">
+          <div className="flex rounded-xl bg-muted/40 p-1">
+            {([["month", "شهر واحد"], ["overview", "كل الشهور"]] as const).map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => setView(k)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  view === k ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className={`flex items-center gap-3 bg-muted/40 rounded-xl px-4 py-2 w-fit ${view === "overview" ? "hidden" : ""}`}>
             <Button variant="ghost" size="icon" onClick={prevMonth} aria-label="الشهر السابق">
               <ChevronRight className="w-4 h-4" />
             </Button>
@@ -354,7 +372,7 @@ export default function MonthlyAccountsPage() {
         </div>
       </div>
 
-      {isError && (
+      {view === "month" && isError && (
         <Card className="border-destructive/40">
           <CardContent className="py-6 text-center space-y-3">
             <AlertTriangle className="w-8 h-8 mx-auto text-destructive" />
@@ -374,7 +392,29 @@ export default function MonthlyAccountsPage() {
         </Card>
       )}
 
-      {!isLoading && !isError && summary && (
+      {view === "overview" && (
+        overview.isLoading ? (
+          <Card><CardContent className="py-12 text-center text-muted-foreground">
+            جارٍ تجميع كل الشهور…
+          </CardContent></Card>
+        ) : overview.data ? (
+          <AccountsOverview
+            data={overview.data}
+            currency={currency}
+            onPickMonth={(y, m) => {
+              setSelectedYear(y);
+              setSelectedMonth(m);
+              setView("month");
+            }}
+          />
+        ) : (
+          <Card><CardContent className="py-12 text-center text-muted-foreground">
+            تعذّر تحميل نظرة الشهور.
+          </CardContent></Card>
+        )
+      )}
+
+      {view === "month" && !isLoading && !isError && summary && (
         <>
           {/* ══ Warnings ══ */}
           {(warn?.unclassifiedInvoicesCount ?? 0) > 0 && (

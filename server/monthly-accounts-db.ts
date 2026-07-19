@@ -744,3 +744,113 @@ export async function getExpenseRowDetails(input: {
     conn.release();
   }
 }
+
+// ─── Multi-month overview ─────────────────────────────────────────────────────
+export interface MonthOverviewRow {
+  year: number;
+  month: number;
+  label: string;
+  daysRecorded: number;
+  netSales: number;
+  foodCostPercentage: number;
+  labourCostPercentage: number;
+  primeCostPercentage: number;
+  netProfit: number;
+  netProfitMargin: number;
+  /** True when the month is still being filled in, so it must not be compared
+   *  like a finished one — a half-recorded month always looks poor. */
+  partial: boolean;
+  /**
+   * Sales exist but food cost came out at zero, which means the inventory
+   * figures were never entered. The month then shows no cost of sales and an
+   * inflated profit — it must be labelled, not ranked as the best month.
+   */
+  inventoryMissing: boolean;
+}
+
+export interface AccountsOverview {
+  months: MonthOverviewRow[];
+  totals: {
+    netSales: number;
+    netProfit: number;
+    /** Weighted by sales, not a mean of percentages — small months would
+     *  otherwise pull the average as hard as large ones. */
+    avgPrimeCostPercentage: number;
+    avgFoodCostPercentage: number;
+    avgLabourCostPercentage: number;
+    profitableMonths: number;
+    monthsCount: number;
+  };
+}
+
+const AR_MONTHS = [
+  "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+  "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+];
+
+/**
+ * Every month that has data, summarised through the SAME calculation the single
+ * month page uses — so a figure can never disagree between the two screens.
+ */
+export async function getAccountsOverview(): Promise<AccountsOverview> {
+  const conn = await getConn();
+  let periods: Array<{ year: number; month: number; days: number }>;
+  try {
+    const [rows] = await conn.execute<any[]>(
+      `SELECT YEAR(accountDate) AS y, MONTH(accountDate) AS m, COUNT(*) AS days
+         FROM daily_accounts
+        GROUP BY y, m
+        ORDER BY y, m`
+    );
+    periods = (rows as any[]).map((r) => ({
+      year: Number(r.y), month: Number(r.m), days: Number(r.days),
+    }));
+  } finally {
+    conn.release();
+  }
+
+  const months: MonthOverviewRow[] = [];
+  for (const p of periods) {
+    const { summary } = await getMonthlyAccounts(p.year, p.month);
+    const daysInMonth = new Date(p.year, p.month, 0).getDate();
+    months.push({
+      year: p.year,
+      month: p.month,
+      label: `${AR_MONTHS[p.month - 1]} ${p.year}`,
+      daysRecorded: p.days,
+      netSales: summary.sales.netSales,
+      foodCostPercentage: summary.inventory.foodCostPercentage,
+      labourCostPercentage: summary.keyMetrics.labourCostPercentage,
+      primeCostPercentage: summary.keyMetrics.primeCostPercentage,
+      netProfit: summary.profits.netProfitAfterInventory,
+      netProfitMargin: summary.profits.netProfitMargin,
+      partial: p.days < daysInMonth,
+      inventoryMissing: summary.sales.netSales > 0 && summary.inventory.foodCost === 0,
+    });
+  }
+
+  const netSales = months.reduce((a, m) => a + m.netSales, 0);
+
+  // Cost ratios average only over months that actually have cost data. Including
+  // a month whose inventory was never entered would count its 0% food cost as a
+  // real achievement and understate the true ratio.
+  const costed = months.filter((m) => !m.inventoryMissing);
+  const costedSales = costed.reduce((a, m) => a + m.netSales, 0);
+  const weighted = (pick: (m: MonthOverviewRow) => number) =>
+    costedSales > 0
+      ? Math.round((costed.reduce((a, m) => a + pick(m) * m.netSales, 0) / costedSales) * 100) / 100
+      : 0;
+
+  return {
+    months,
+    totals: {
+      netSales: Math.round(netSales * 1000) / 1000,
+      netProfit: Math.round(months.reduce((a, m) => a + m.netProfit, 0) * 1000) / 1000,
+      avgPrimeCostPercentage: weighted((m) => m.primeCostPercentage),
+      avgFoodCostPercentage: weighted((m) => m.foodCostPercentage),
+      avgLabourCostPercentage: weighted((m) => m.labourCostPercentage),
+      profitableMonths: months.filter((m) => m.netProfit > 0).length,
+      monthsCount: months.length,
+    },
+  };
+}

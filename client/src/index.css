@@ -218,3 +218,32 @@
   }
   .menu-wrap.menu-page * { visibility: visible !important; }
 }
+
+/* ── Data-viz roles (validated palette; see AccountsOverview.tsx) ───────────── */
+.viz-root {
+  --viz-surface: #ffffff;
+  --viz-grid:    #e7e5e4;
+  --viz-axis:    #a8a29e;
+  --viz-sales:   #2a78d6;
+  --viz-food:    #2a78d6;
+  --viz-labour:  #d97706;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    --viz-surface: #0c0a09;
+    --viz-grid:    #292524;
+    --viz-axis:    #57534e;
+    --viz-sales:   #3987e5;
+    --viz-food:    #3987e5;
+    --viz-labour:  #cf8000;
+  }
+}
+:root[data-theme="dark"] .viz-root,
+.dark .viz-root {
+  --viz-surface: #0c0a09;
+  --viz-grid:    #292524;
+  --viz-axis:    #57534e;
+  --viz-sales:   #3987e5;
+  --viz-food:    #3987e5;
+  --viz-labour:  #cf8000;
+}

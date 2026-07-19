@@ -249,6 +249,7 @@ import { getMenuEngineeringAnalysis } from "./menu-engineering-db";
 import { listShifts, createShift, updateShift, deleteShift, getShiftStats } from "./shifts-db";
 import {
   getMonthlyAccounts,
+  getAccountsOverview,
   updateExpenseClassification,
   getMonthlyAccountSettings,
   getExpenseRowDetails,
@@ -588,6 +589,9 @@ export const monthlyAccountsRouter = router({
       })
     )
     .query(({ input }) => getMonthlyAccounts(input.year, input.month)),
+
+  /** Every month at once, for the overview dashboard. */
+  overview: protectedProcedure.query(() => getAccountsOverview()),
 
   expenseRowDetails: protectedProcedure
     .input(
