@@ -15,11 +15,27 @@ interface SendTextResult {
   error?: string;
 }
 
+/**
+ * Blocks every outbound WhatsApp send when DISABLE_BACKGROUND_JOBS=true.
+ *
+ * Guarding the transport itself rather than each caller: messages are sent from
+ * the scheduler, daily-account notifications and event subscriptions, and a
+ * dev server pointed at a production database would otherwise message real
+ * customers from a developer's laptop.
+ */
+function outboundBlocked(): boolean {
+  return process.env.DISABLE_BACKGROUND_JOBS === "true";
+}
+
 export async function sendWhatsAppText(
   config: EvolutionConfig,
   phoneNumber: string,
   message: string
 ): Promise<SendTextResult> {
+  if (outboundBlocked()) {
+    console.warn(`[Safety] blocked WhatsApp text to ${phoneNumber} (DISABLE_BACKGROUND_JOBS=true)`);
+    return { success: false, error: "الإرسال معطّل (DISABLE_BACKGROUND_JOBS)" } as SendTextResult;
+  }
   try {
     // Normalize phone number: remove spaces, dashes, +
     const normalizedPhone = phoneNumber.replace(/[\s\-\+]/g, "");
@@ -321,6 +337,10 @@ export async function sendWhatsAppDocument(
   caption: string,
   fileName = "report.pdf"
 ): Promise<SendTextResult> {
+  if (outboundBlocked()) {
+    console.warn(`[Safety] blocked WhatsApp document to ${phoneNumber} (DISABLE_BACKGROUND_JOBS=true)`);
+    return { success: false, error: "الإرسال معطّل (DISABLE_BACKGROUND_JOBS)" } as SendTextResult;
+  }
   try {
     const normalizedPhone = phoneNumber.replace(/[\s\-\+]/g, "");
     const url = `${config.apiUrl.replace(/\/$/, "")}/message/sendMedia/${config.instance}`;

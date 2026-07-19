@@ -249,6 +249,18 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+
+    // Escape hatch for pointing a local/dev server at a production database.
+    // Without it, booting here starts a scheduler that sends REAL WhatsApp
+    // messages every minute to the numbers stored in whatever database is
+    // configured — see whatsappScheduler.startScheduler → sendWhatsAppText.
+    if (process.env.DISABLE_BACKGROUND_JOBS === "true") {
+      console.warn(
+        "[Safety] DISABLE_BACKGROUND_JOBS=true — WhatsApp scheduler and cloud auto-sync are NOT running."
+      );
+      return;
+    }
+
     // Start WhatsApp report scheduler
     startScheduler();
     // Start automatic cloud sync (every minute, if CLOUD_DATABASE_URL is set)
