@@ -641,6 +641,7 @@ export const monthlyAccountsRouter = router({
         scope: z.enum(["ALL", "FREE_ONLY", "IMPORTED_ONLY"]),
         // The client must echo back "YYYY-MM" so a stray click cannot wipe a month.
         confirm: z.string(),
+        clearDailyExpenses: z.boolean().optional(),
       })
     )
     .mutation(({ input, ctx }) => {
@@ -654,6 +655,7 @@ export const monthlyAccountsRouter = router({
       return deleteMonthInvoices({
         year: input.year, month: input.month,
         scope: input.scope, userId: ctx.user.id,
+        clearDailyExpenses: input.clearDailyExpenses,
       });
     }),
 

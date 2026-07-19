@@ -54,6 +54,7 @@ export default function DeleteMonthDialog({
 }) {
   const [scope, setScope] = useState<Scope>("IMPORTED_ONLY");
   const [confirmText, setConfirmText] = useState("");
+  const [clearDaily, setClearDaily] = useState(false);
   const expected = `${year}-${String(month).padStart(2, "0")}`;
 
   const preview = trpc.monthlyAccounts.previewMonthDeletion.useQuery(
@@ -77,12 +78,15 @@ export default function DeleteMonthDialog({
       utils.monthlyAccounts.getMonth.invalidate();
       onDeleted?.();
       setConfirmText("");
+      setClearDaily(false);
       onOpenChange(false);
     },
     onError: (e) => toast.error(e.message || "تعذّر الحذف"),
   });
 
-  useEffect(() => { if (!open) { setConfirmText(""); setScope("IMPORTED_ONLY"); } }, [open]);
+  useEffect(() => {
+    if (!open) { setConfirmText(""); setScope("IMPORTED_ONLY"); setClearDaily(false); }
+  }, [open]);
 
   const p = preview.data;
   const monthLabel = new Date(year, month - 1, 1).toLocaleDateString("ar-AE", {
@@ -150,6 +154,26 @@ export default function DeleteMonthDialog({
                   </div>
                 </div>
               </div>
+
+              {/* Daily fixed expenses are a field on the day, not an invoice, so
+                  no scope touches them — they are opted into on their own. */}
+              {p.dailyExpenses.days > 0 && (
+                <label className="flex items-start gap-2.5 rounded-lg border p-3 cursor-pointer hover:bg-muted/40">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 w-4 h-4 accent-rose-600"
+                    checked={clearDaily}
+                    onChange={(e) => setClearDaily(e.target.checked)}
+                  />
+                  <span className="text-sm">
+                    امسح كمان المصروفات اليومية
+                    <span className="block text-[11px] text-muted-foreground mt-0.5">
+                      {p.dailyExpenses.days} يوم — {fmt(p.dailyExpenses.total)} {currency}.
+                      مبيعات تلك الأيام لا تتأثر.
+                    </span>
+                  </span>
+                </label>
+              )}
 
               {p.monthlyPaymentsUntouched > 0 && (
                 <p className="text-[11px] text-muted-foreground">
@@ -224,8 +248,14 @@ export default function DeleteMonthDialog({
           </Button>
           <Button
             variant="destructive"
-            disabled={!confirmed || del.isPending || (scope !== "IMPORTED_ONLY" && willDeleteCount === 0)}
-            onClick={() => del.mutate({ year, month, scope, confirm: confirmText.trim() })}
+            disabled={
+              !confirmed || del.isPending ||
+              (scope !== "IMPORTED_ONLY" && willDeleteCount === 0 && !clearDaily)
+            }
+            onClick={() => del.mutate({
+              year, month, scope, confirm: confirmText.trim(),
+              clearDailyExpenses: clearDaily,
+            })}
             className="gap-2"
           >
             {del.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}

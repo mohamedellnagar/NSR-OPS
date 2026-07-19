@@ -191,6 +191,11 @@ export interface MonthDeletionPreview {
     resultingQuantity: number;
     goesNegative: boolean;
   }>;
+  /**
+   * The `expensesFixed` figure on this month's daily_accounts rows. Not an
+   * invoice, so it is never removed by a scope — it is opted into separately.
+   */
+  dailyExpenses: { days: number; total: number };
   /** Monthly payments are NOT invoices and are never touched — shown for clarity. */
   monthlyPaymentsUntouched: number;
 }
@@ -219,6 +224,13 @@ export async function previewMonthDeletion(
       [year, month]
     )) as any;
 
+    const [[daily]] = (await conn.execute(
+      `SELECT COUNT(*) AS n, COALESCE(SUM(expensesFixed),0) AS total
+         FROM daily_accounts
+        WHERE accountDate BETWEEN ? AND ? AND expensesFixed > 0`,
+      [start, end]
+    )) as any;
+
     // Aggregate per material so the user sees the real stock impact up front.
     const [mats] = await conn.execute<any[]>(
       `SELECT ii.materialId,
@@ -241,6 +253,7 @@ export async function previewMonthDeletion(
       freeInvoices: Number(free?.n ?? 0),
       supplierTotal: num(sup?.total),
       freeTotal: num(free?.total),
+      dailyExpenses: { days: num(daily.n), total: num(daily.total) },
       monthlyPaymentsUntouched: Number(mp?.n ?? 0),
       affectedMaterials: (mats as any[]).map((m) => {
         const current = num(m.currentQuantity);
@@ -269,6 +282,8 @@ export interface MonthDeletionResult {
   month: number;
   deletedSupplierInvoices: number;
   deletedFreeInvoices: number;
+  /** Days whose fixed expense was cleared. The sales on those days survive. */
+  clearedDailyExpenseDays: number;
   materialsAdjusted: number;
   averageCostSkipped: number;
   stockWentNegative: string[];
@@ -281,6 +296,8 @@ export async function deleteMonthInvoices(input: {
   year: number;
   month: number;
   scope: DeleteScope;
+  /** Also zero the daily fixed-expense figures. Off unless asked for. */
+  clearDailyExpenses?: boolean;
   userId: number;
 }): Promise<MonthDeletionResult> {
   const startedAt = Date.now();
@@ -290,6 +307,7 @@ export async function deleteMonthInvoices(input: {
   const result: MonthDeletionResult = {
     year: input.year, month: input.month,
     deletedSupplierInvoices: 0, deletedFreeInvoices: 0,
+    clearedDailyExpenseDays: 0,
     materialsAdjusted: 0, averageCostSkipped: 0,
     stockWentNegative: [], reversalTransactions: 0,
     durationMs: 0, errors: [],
@@ -344,6 +362,18 @@ export async function deleteMonthInvoices(input: {
       );
       await conn.execute(`DELETE FROM free_invoices WHERE id IN (${placeholders})`, freeIds);
       result.deletedFreeInvoices = freeIds.length;
+    }
+
+    // ── 3. Daily fixed expenses ──
+    // Zeroed, not deleted: the daily_accounts row also carries that day's SALES,
+    // so removing it would destroy revenue the caller never asked to touch.
+    if (input.clearDailyExpenses) {
+      const [res] = await conn.execute<any>(
+        `UPDATE daily_accounts SET expensesFixed = 0
+          WHERE accountDate BETWEEN ? AND ? AND expensesFixed > 0`,
+        [start, end]
+      );
+      result.clearedDailyExpenseDays = res.affectedRows ?? 0;
     }
 
     result.durationMs = Date.now() - startedAt;
