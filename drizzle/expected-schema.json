@@ -1,0 +1,4826 @@
+{
+  "app_settings": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "restaurantName",
+      "sqlType": "varchar(255)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "restaurantNameEn",
+      "sqlType": "varchar(255)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "phone",
+      "sqlType": "varchar(50)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "phone2",
+      "sqlType": "varchar(50)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "email",
+      "sqlType": "varchar(320)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "address",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "city",
+      "sqlType": "varchar(100)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "country",
+      "sqlType": "varchar(100)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "timezone",
+      "sqlType": "varchar(64)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "businessDayStartHour",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "currency",
+      "sqlType": "varchar(10)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "currencySymbol",
+      "sqlType": "varchar(10)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "vatRate",
+      "sqlType": "decimal(5,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "vatEnabled",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "openingStockValue",
+      "sqlType": "decimal(14,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "openaiApiKey",
+      "sqlType": "varchar(255)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "butcher_production": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "productionDate",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productNameAr",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "producedQuantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "butcher_production_materials": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "productionId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "rawMaterialId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "materialName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "consumedQuantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "butcher_products": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "nameAr",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "pricePerUnit",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "soldByWeight",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "currentStock",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "isActive",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "butcher_recipes": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "productId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "materialId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "quantity",
+      "sqlType": "decimal(12,4)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(50)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "butcher_sale_items": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "saleId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "soldByWeight",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "quantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "pricePerUnit",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "totalPrice",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "butcher_sales": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "saleDate",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "totalAmount",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "paymentMethod",
+      "sqlType": "enum('cash','card','transfer')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "butcher_waste": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "wasteDate",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "itemType",
+      "sqlType": "enum('raw_material','butcher_product')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "rawMaterialId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "butcherProductId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "itemName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "wasteQty",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unitCost",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "totalCost",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "reason",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "comparison_match_groups": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "comparisonSessionId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unifiedName",
+      "sqlType": "varchar(512)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unifiedNameAr",
+      "sqlType": "varchar(512)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "unifiedCategory",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "confidenceScore",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "matchReason",
+      "sqlType": "varchar(512)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "sortOrder",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "comparison_match_items": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "matchGroupId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "importSessionId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "menuItemId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "priceSnapshot",
+      "sqlType": "decimal(10,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "currency",
+      "sqlType": "varchar(8)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "comparison_restaurants": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "comparisonSessionId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "importSessionId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "daily_accounts": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "accountDate",
+      "sqlType": "varchar(10)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "salesCash",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "salesCard",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "salesKita",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "salesOrders",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "salesNoon",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "salesDeliveroo",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "salesCareem",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "expensesFixed",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "expensesOperational",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "expensesMaintenance",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "supplyToRestaurant",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "supplyToManagement",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "supplyExtra",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "carryForwardToNext",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "carryForwardEditReason",
+      "sqlType": "varchar(500)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "staffMeals",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "foodCostPercent",
+      "sqlType": "decimal(6,2)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "stockValue",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "daily_sales_items": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "uploadId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productSku",
+      "sqlType": "varchar(100)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "productName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "netQuantity",
+      "sqlType": "decimal(12,4)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "totalSales",
+      "sqlType": "decimal(12,4)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "netSales",
+      "sqlType": "decimal(12,4)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "daily_sales_uploads": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "saleDate",
+      "sqlType": "date",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "branchName",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "branchRef",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "fileName",
+      "sqlType": "varchar(512)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "totalItems",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "free_invoice_items": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "invoiceId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "description",
+      "sqlType": "varchar(512)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "qty",
+      "sqlType": "decimal(10,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "unitPrice",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "total",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "free_invoices": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "invoiceStatus",
+      "sqlType": "enum('draft','pending','approved','rejected','cancelled')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "supplierName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "supplierType",
+      "sqlType": "enum('supplier','service')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "invoiceNumber",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "supplierInvoiceNumber",
+      "sqlType": "varchar(128)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "date",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "dueDate",
+      "sqlType": "date",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "subtotal",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "vatPct",
+      "sqlType": "decimal(5,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "vatMode",
+      "sqlType": "enum('exclusive','inclusive')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "vatAmount",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "totalAmount",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "paymentStatus",
+      "sqlType": "enum('paid','deferred','partial','under_review')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "paidAmount",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "remainingAmount",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "expenseCategory",
+      "sqlType": "enum('operational','maintenance','fixed','other')",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "expenseType",
+      "sqlType": "enum('OPERATIONAL','NON_OPERATIONAL')",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "expenseCategoryCode",
+      "sqlType": "enum('FOOD_PURCHASES','SALARIES','RENT','UTILITIES','GAS','PACKAGING','CLEANING','MAINTENANCE','DELIVERY','APP_COMMISSIONS','MARKETING','BANK_FEES','EQUIPMENT_ASSETS','OWNER_DRAW','TAXES','LICENSES','CHARCOAL','BUTCHERY','OTHER')",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "paymentMethod",
+      "sqlType": "enum('CASH','BANK_TRANSFER','CARD','CHEQUE','OTHER')",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "paidAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "imported_menu_categories": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "sessionId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "sortOrder",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "imported_menu_items": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "sessionId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "categoryId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "categoryName",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(512)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "nameAr",
+      "sqlType": "varchar(512)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "description",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "price",
+      "sqlType": "decimal(10,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "currency",
+      "sqlType": "varchar(8)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "imageUrl",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "isAvailable",
+      "sqlType": "boolean",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "exported",
+      "sqlType": "boolean",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "inventory_transactions": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "materialId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "transactionType",
+      "sqlType": "enum('IN','OUT','ADJUSTMENT')",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "quantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unitPrice",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "totalAmount",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "supplierId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "supplierName",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "destination",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "reason",
+      "sqlType": "enum('purchase','production','waste','transfer','return','adjustment','other','opening_balance')",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "movementStatus",
+      "sqlType": "enum('draft','posted','reversed','cancelled')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "referenceNumber",
+      "sqlType": "varchar(128)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "referenceType",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "reversingTransactionId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "quantityBefore",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "quantityAfter",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "transactionDate",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "expiryDate",
+      "sqlType": "date",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "invoice_audit_log": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "invoiceId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "invoiceType",
+      "sqlType": "enum('supplier','free')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "invoiceNumber",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "action",
+      "sqlType": "varchar(64)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "userId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "userName",
+      "sqlType": "varchar(128)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "metadata",
+      "sqlType": "json",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "invoice_items": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "invoiceId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "materialId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "materialName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "materialUnit",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "quantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unitPrice",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "totalPrice",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": false
+    }
+  ],
+  "invoice_payment_history": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "invoiceId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "invoiceType",
+      "sqlType": "enum('supplier','free')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "paymentDate",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "paidAmount",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "paymentType",
+      "sqlType": "enum('paid','partial')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "paymentMethod",
+      "sqlType": "enum('cash','bank_transfer','card','cheque','other')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "paymentAccount",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "referenceNumber",
+      "sqlType": "varchar(128)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "isVoided",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "voidReason",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "voidedAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "invoices": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "invoiceNumber",
+      "sqlType": "varchar(64)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "invoiceStatus",
+      "sqlType": "enum('draft','pending','approved','rejected','cancelled')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "supplierId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "supplierName",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "supplierInvoiceNumber",
+      "sqlType": "varchar(128)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "invoiceDate",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "dueDate",
+      "sqlType": "date",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "subtotal",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "vatEnabled",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "vatRate",
+      "sqlType": "decimal(5,2)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "vatMode",
+      "sqlType": "enum('exclusive','inclusive')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "vatAmount",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "totalAmount",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "paymentStatus",
+      "sqlType": "enum('paid','deferred','partial','under_review')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "paidAmount",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "remainingAmount",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "paidAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "expenseCategory",
+      "sqlType": "enum('operational','maintenance','fixed','other')",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "expenseType",
+      "sqlType": "enum('OPERATIONAL','NON_OPERATIONAL')",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "expenseCategoryCode",
+      "sqlType": "enum('FOOD_PURCHASES','SALARIES','RENT','UTILITIES','GAS','PACKAGING','CLEANING','MAINTENANCE','DELIVERY','APP_COMMISSIONS','MARKETING','BANK_FEES','EQUIPMENT_ASSETS','OWNER_DRAW','TAXES','LICENSES','CHARCOAL','BUTCHERY','OTHER')",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "paymentMethod",
+      "sqlType": "enum('CASH','BANK_TRANSFER','CARD','CHEQUE','OTHER')",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "stockUpdated",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "postToInventory",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "kitchen_daily_production": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "productionDate",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productNameAr",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "openingBalance",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "producedQuantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "usedQuantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "closingBalance",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "actualUnitCost",
+      "sqlType": "decimal(12,4)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "kitchen_daily_pulls": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "pullDate",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "materialId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "materialName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "materialNameAr",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "materialType",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "pulledQuantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "actualYield",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "ordersConsumed",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "closingCount",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "carriedForward",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "carriedRawQty",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "wasteQty",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "status",
+      "sqlType": "enum('open','counted','closed')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "isCarriedForward",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "kitchen_inventory_counts": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "countDate",
+      "sqlType": "varchar(10)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "materialId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "materialName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "openingQty",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "receivedQty",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "closingQty",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "actualConsumption",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "unitCost",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "consumptionCost",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "kitchen_item_production": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "productionDate",
+      "sqlType": "date",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productNameAr",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "producedQty",
+      "sqlType": "decimal(10,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "carriedForwardQty",
+      "sqlType": "decimal(10,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "totalAvailableQty",
+      "sqlType": "decimal(10,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "soldQty",
+      "sqlType": "decimal(10,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "remainingQty",
+      "sqlType": "decimal(10,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "wasteQty",
+      "sqlType": "decimal(10,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "is86d",
+      "sqlType": "boolean",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "rawMaterialsDeducted",
+      "sqlType": "boolean",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "status",
+      "sqlType": "enum('in_service','closed')",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "kitchen_production_counts": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "productionId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "actualCount",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "countedBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "countedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "kitchen_production_materials": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "productionId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "rawMaterialId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "materialName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "consumedQuantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "wasteQty",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "kitchen_products": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "nameAr",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "material_categories": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(128)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "nameAr",
+      "sqlType": "varchar(128)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "description",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "color",
+      "sqlType": "varchar(32)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "isActive",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "menu_import_sessions": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "sourceUrl",
+      "sqlType": "text",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "platform",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "status",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "restaurantName",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "restaurantNameAr",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "restaurantLogoUrl",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "itemCount",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "categoryCount",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "errorMessage",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "savedToDb",
+      "sqlType": "boolean",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "monthly_account_settings": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "year",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "month",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "openingInventory",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "closingInventory",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "discounts",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "updatedBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "monthly_payments": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "category",
+      "sqlType": "varchar(64)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "totalAmount",
+      "sqlType": "decimal(12,4)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "paidAmount",
+      "sqlType": "decimal(12,4)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "dueDay",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "month",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "year",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "recurrence",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "status",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "paidAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "expenseType",
+      "sqlType": "enum('OPERATIONAL','NON_OPERATIONAL')",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "expenseCategoryCode",
+      "sqlType": "enum('FOOD_PURCHASES','SALARIES','RENT','UTILITIES','GAS','PACKAGING','CLEANING','MAINTENANCE','DELIVERY','APP_COMMISSIONS','MARKETING','BANK_FEES','EQUIPMENT_ASSETS','OWNER_DRAW','TAXES','LICENSES','CHARCOAL','BUTCHERY','OTHER')",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "paymentMethod",
+      "sqlType": "enum('CASH','BANK_TRANSFER','CARD','CHEQUE','OTHER')",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "monthly_stock_snapshots": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "year",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "month",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "rawMaterialsValue",
+      "sqlType": "decimal(14,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "butcherValue",
+      "sqlType": "decimal(14,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "manufacturedValue",
+      "sqlType": "decimal(14,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "totalValue",
+      "sqlType": "decimal(14,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "supplierDebt",
+      "sqlType": "decimal(14,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "freeDebt",
+      "sqlType": "decimal(14,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "totalDebt",
+      "sqlType": "decimal(14,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "totalSales",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "totalOpEx",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "totalMainEx",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "totalFixedEx",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "opPaid",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "opDeferred",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "cogsValue",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "grossProfit",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "netProfit",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "openingStockValue",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "snapshotDate",
+      "sqlType": "varchar(10)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "pos_customers": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "phone",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "area",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "building",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "floor",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "apartment",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "orderCount",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "lastOrderAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "pos_order_items": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "orderId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productNameAr",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "quantity",
+      "sqlType": "decimal(10,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "unitPrice",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "discountAmount",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "totalPrice",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "status",
+      "sqlType": "enum('pending','preparing','ready','served','cancelled')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "modifiers",
+      "sqlType": "json",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "isVoided",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "voidReason",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "voidedAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "course",
+      "sqlType": "varchar(50)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "printedAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "pos_orders": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "orderNumber",
+      "sqlType": "varchar(64)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "tableId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "orderType",
+      "sqlType": "enum('dine_in','takeaway','delivery')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "status",
+      "sqlType": "enum('draft','sent_to_kitchen','partially_ready','ready','served','paid','cancelled','refunded')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "waiterId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "cashierId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "guestCount",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "subtotal",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "discountType",
+      "sqlType": "enum('fixed','percentage')",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "discountValue",
+      "sqlType": "decimal(10,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "discountAmount",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "taxPct",
+      "sqlType": "decimal(5,2)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "taxAmount",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "tipAmount",
+      "sqlType": "decimal(10,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "secondPaymentMethod",
+      "sqlType": "enum('cash','card','transfer','online')",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "secondPaymentAmount",
+      "sqlType": "decimal(10,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "total",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "customerName",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "customerPhone",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "customerArea",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "customerBuilding",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "customerFloor",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "customerApartment",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "deliveryNotes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "customerId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "waiterName",
+      "sqlType": "varchar(128)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "transferredFromTableId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "sentToKitchenAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "readyAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "servedAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "paidAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "pos_payments": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "orderId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "paymentMethod",
+      "sqlType": "enum('cash','card','transfer','online')",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "amount",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "cashPaid",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "changeGiven",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "reference",
+      "sqlType": "varchar(100)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "processedBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "processedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "pos_returns": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "originalOrderId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "reason",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "totalRefund",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "refundMethod",
+      "sqlType": "enum('cash','card','credit')",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "processedBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "processedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "price_comparison_sessions": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "myRestaurantSessionId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "status",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "matchedGroupCount",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "products": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(255)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "nameAr",
+      "sqlType": "varchar(255)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "sku",
+      "sqlType": "varchar(100)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "categoryReference",
+      "sqlType": "varchar(100)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "price",
+      "sqlType": "decimal(12,4)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "cost",
+      "sqlType": "decimal(12,4)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "description",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "calories",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "isActive",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "showInMenu",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "recipeSource",
+      "sqlType": "varchar(20)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "purchase_order_items": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "orderId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "materialId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "materialName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(32)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "requestedQty",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unitPrice",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "totalPrice",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    }
+  ],
+  "purchase_orders": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "orderNumber",
+      "sqlType": "varchar(64)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "supplierId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "supplierName",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "status",
+      "sqlType": "enum('draft','sent','confirmed','received','cancelled')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "totalAmount",
+      "sqlType": "decimal(14,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "sentAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "confirmedAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "receivedAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "raw_materials": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "code",
+      "sqlType": "varchar(64)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "nameAr",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "categoryId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "outputQuantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "shelfLife",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "storageLocation",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "defaultWastePercent",
+      "sqlType": "decimal(5,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "currentQuantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "minimumQuantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "reorderQuantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "lastPurchasePrice",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "averageCost",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "materialType",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "recipeStatus",
+      "sqlType": "enum('draft','pending','approved','suspended','archived')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "recipeVersion",
+      "sqlType": "smallint",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "approvedBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "approvalDate",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "changeLog",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "isActive",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "recipe_items": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "productId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "materialId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "quantity",
+      "sqlType": "decimal(10,4)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "wastePercent",
+      "sqlType": "decimal(5,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(50)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "notes",
+      "sqlType": "varchar(255)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "allergens",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "report_logs": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "subscriptionId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "status",
+      "sqlType": "enum('sent','failed','pending')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "recipientPhone",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "messageContent",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "errorMessage",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "retryCount",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "sentAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "report_recipients": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "subscriptionId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "phoneNumber",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(128)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "report_subscriptions": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "reportType",
+      "sqlType": "enum('daily_sales','orders_summary','kitchen_cost','inventory_value','waste_summary','system_alerts','warehouse_performance','kitchen_production','kitchen_pull','daily_account_summary','supplier_invoice_new','supplier_invoice_paid','free_invoice_new','free_invoice_paid','daily_summary_confirmed','food_cost_alert','expiry_alert','daily_closing_report','purchase_order_sent','low_stock_po_created')",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "scheduleType",
+      "sqlType": "enum('hourly','daily','weekly','monthly','instant','event')",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "scheduleHour",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "scheduleDay",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "scheduleEveryHours",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "isActive",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "messageTemplate",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "report_templates": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "reportType",
+      "sqlType": "varchar(50)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "headerText",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "footerText",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "bodyText",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "includeDate",
+      "sqlType": "boolean",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "customFields",
+      "sqlType": "json",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "full_text",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    }
+  ],
+  "restaurant_settings": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "live_menu_token",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "live_menu_id",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "restaurant_name",
+      "sqlType": "varchar(255)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "restaurant_name_en",
+      "sqlType": "varchar(255)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "currency",
+      "sqlType": "varchar(10)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "created_at",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updated_at",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "restaurant_tables": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "tableNumber",
+      "sqlType": "varchar(20)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "label",
+      "sqlType": "varchar(100)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "capacity",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "section",
+      "sqlType": "varchar(100)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "status",
+      "sqlType": "enum('available','occupied','reserved')",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "isActive",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "sortOrder",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "sale_items": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "reportId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "productName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "sku",
+      "sqlType": "varchar(100)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "branchName",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "branchRef",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "totalSales",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "netSalesWithTax",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "tax",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "discount",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "netSales",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "qty",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "cost",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "returnAmount",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "returnQty",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "cancelAmount",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "cancelQty",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "profit",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "productId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "sales_reports": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "reportDateFrom",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "reportDateTo",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "branchName",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "branchRef",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "totalSales",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "totalNetSales",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "totalQty",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "totalCost",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "totalProfit",
+      "sqlType": "decimal(14,3)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "fileName",
+      "sqlType": "varchar(512)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "saved_menus": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(255)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "token",
+      "sqlType": "varchar(64)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "menuData",
+      "sqlType": "text",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "restaurantName",
+      "sqlType": "varchar(255)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "restaurantLogo",
+      "sqlType": "varchar(512)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "isActive",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "semi_finished_recipe_versions": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "materialId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "version",
+      "sqlType": "smallint",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "status",
+      "sqlType": "enum('draft','pending','approved','suspended','archived')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "ingredientsSnapshot",
+      "sqlType": "json",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "totalCost",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "costPerUnit",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "outputQuantity",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": true
+    },
+    {
+      "name": "outputUnit",
+      "sqlType": "varchar(32)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "changeLog",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "approvedBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "approvalDate",
+      "sqlType": "timestamp",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "semi_finished_recipes": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "materialId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "ingredientId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "quantity",
+      "sqlType": "decimal(12,4)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "actualQuantity",
+      "sqlType": "decimal(12,4)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(50)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "expectedWastePercent",
+      "sqlType": "decimal(5,2)",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "shift_assignments": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "shiftId",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "employeeName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "employeeNameAr",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "role",
+      "sqlType": "varchar(128)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "shifts": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "shiftDate",
+      "sqlType": "date",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "shiftType",
+      "sqlType": "enum('morning','afternoon','night')",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "startTime",
+      "sqlType": "varchar(8)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "endTime",
+      "sqlType": "varchar(8)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "suppliers": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "nameAr",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "contactPerson",
+      "sqlType": "varchar(128)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "phone",
+      "sqlType": "varchar(32)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "email",
+      "sqlType": "varchar(320)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "address",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "whatsappPhone",
+      "sqlType": "varchar(32)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "isActive",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "users": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "openId",
+      "sqlType": "varchar(64)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "name",
+      "sqlType": "varchar(128)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "email",
+      "sqlType": "varchar(320)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "passwordHash",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "role",
+      "sqlType": "enum('admin','warehouse_manager','viewer')",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "isActive",
+      "sqlType": "boolean",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "allowedPages",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "lastSignedIn",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "waste_logs": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "wasteDate",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "materialId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "materialName",
+      "sqlType": "varchar(256)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "materialNameAr",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "unit",
+      "sqlType": "varchar(32)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "wasteQty",
+      "sqlType": "decimal(12,3)",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "unitCost",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "totalCost",
+      "sqlType": "decimal(12,3)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "source",
+      "sqlType": "enum('kitchen','raw_material','semi_finished')",
+      "notNull": true,
+      "hasDefault": false
+    },
+    {
+      "name": "referenceId",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "reason",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "notes",
+      "sqlType": "text",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdBy",
+      "sqlType": "int",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "createdAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ],
+  "whatsapp_settings": [
+    {
+      "name": "id",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "evolutionApiUrl",
+      "sqlType": "varchar(512)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "evolutionApiKey",
+      "sqlType": "varchar(512)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "evolutionInstance",
+      "sqlType": "varchar(256)",
+      "notNull": false,
+      "hasDefault": false
+    },
+    {
+      "name": "isConfigured",
+      "sqlType": "int",
+      "notNull": true,
+      "hasDefault": true
+    },
+    {
+      "name": "updatedAt",
+      "sqlType": "timestamp",
+      "notNull": true,
+      "hasDefault": true
+    }
+  ]
+}
