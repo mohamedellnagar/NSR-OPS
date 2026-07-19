@@ -1054,9 +1054,14 @@ export async function updateInvoiceStatus(
     return;
   }
 
-  // استخدام paidAt اليدوي إذا كان محدداً ولا يتجاوز الوقت الحالي
+  // استخدام paidAt اليدوي إذا كان محدداً ولا يتجاوز الوقت الحالي.
+  // Falling back to the INVOICE date rather than `now`: marking a back-dated
+  // invoice as paid would otherwise file it under today, and the daily view
+  // groups by this column — so a batch of old invoices settled in one sitting
+  // all piled onto that day.
+  const invoiceDay = existing.invoiceDate ? businessDayInstant(new Date(existing.invoiceDate)) : now;
   const effectivePaidAt = (paymentStatus === "paid" || paymentStatus === "partial")
-    ? (paidAt && paidAt <= now ? paidAt : now)
+    ? (paidAt && paidAt <= now ? paidAt : invoiceDay)
     : undefined;
 
   let newPaidAmount: number;
@@ -4601,9 +4606,11 @@ export async function updateFreeInvoiceStatus(
     return;
   }
 
-  // استخدام paidAt اليدوي إذا كان محدداً ولا يتجاوز الوقت الحالي
+  // استخدام paidAt اليدوي إذا كان محدداً ولا يتجاوز الوقت الحالي.
+  // Falls back to the INVOICE date, not `now` — see updateInvoiceStatus.
+  const invoiceDay = existing.date ? businessDayInstant(new Date(existing.date)) : now;
   const effectivePaidAt = (paymentStatus === "paid" || paymentStatus === "partial")
-    ? (paidAt && paidAt <= now ? paidAt : now)
+    ? (paidAt && paidAt <= now ? paidAt : invoiceDay)
     : undefined;
 
   let newPaidAmount: number;

@@ -79,6 +79,21 @@ function fmtCurrency(val: string | number | null | undefined, ar: boolean) {
     : `AED ${n.toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/**
+ * datetime-local value for the payment-date field: the invoice's own date at
+ * midday, which is what the business-day grouping expects. Falls back to now
+ * only when the invoice has no date at all.
+ */
+function defaultPaidAtLocal(invoiceDate: Date | string | null | undefined): string {
+  const base = invoiceDate ? new Date(invoiceDate) : new Date();
+  if (Number.isNaN(base.getTime())) return "";
+  const noon = new Date(base.getFullYear(), base.getMonth(), base.getDate(), 12, 0, 0);
+  const now = new Date();
+  const clamped = noon > now ? now : noon; // the input caps at "now"
+  return new Date(clamped.getTime() - clamped.getTimezoneOffset() * 60000)
+    .toISOString().slice(0, 16);
+}
+
 function fmtDate(d: Date | string, ar: boolean) {
   return new Date(d).toLocaleDateString(ar ? "ar-AE" : "en-AE", { year: "numeric", month: "short", day: "numeric" });
 }
@@ -1243,9 +1258,11 @@ export default function InvoicesPage() {
                               setStatusDialogType(inv.invoiceType === "free" ? "free" : "supplier");
                               setNewStatus(inv.paymentStatus);
                               setNewPaidAmount("");
-                              const now = new Date();
-                              const localISO = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                              setNewPaidAt(localISO);
+                              // Default to the INVOICE's own date, not now. The daily
+                              // accounts view groups by payment date, so defaulting to
+                              // "now" filed every back-dated invoice settled today
+                              // under today.
+                              setNewPaidAt(defaultPaidAtLocal(inv.invoiceDate ?? inv.date));
                             }} title={ar ? "تحديث الدفع" : "Update payment"}>
                             <CheckCircle size={13} />
                           </Button>
@@ -2337,9 +2354,7 @@ function FreeInvoicesSection({ ar, isRTL }: { ar: boolean; isRTL: boolean }) {
                               setStatusDialogId(inv.id); 
                               setNewStatus(inv.paymentStatus); 
                               setNewPaidAmount(inv.paidAmount ?? ""); 
-                              const now = new Date();
-                              const localISO = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-                              setNewPaidAt(localISO);
+                              setNewPaidAt(defaultPaidAtLocal(inv.date ?? inv.invoiceDate));
                             }} title={ar ? "تحديث الدفع" : "Update payment"}>
                             <CheckCircle size={13} />
                           </Button>
