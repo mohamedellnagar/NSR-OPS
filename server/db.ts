@@ -780,6 +780,13 @@ export interface CreateInvoiceInput {
   vatEnabled: boolean;
   paymentStatus: "paid" | "deferred" | "partial" | "under_review";
   paidAmount?: number;
+  /**
+   * When the invoice was actually PAID. Defaults to the invoice date. The
+   * daily accounts view groups paid invoices by this column, so leaving it
+   * null made them fall back to `updatedAt` (the moment of data entry) and
+   * every invoice recorded on one day appeared under that day.
+   */
+  paidAt?: Date;
   notes?: string;
   expenseCategory?: "operational" | "maintenance" | "fixed" | "other";
   createdBy: number;
@@ -847,6 +854,9 @@ export async function createInvoice(input: CreateInvoiceInput) {
     vatAmount: String(vatAmount.toFixed(3)),
     totalAmount: String(totalAmount.toFixed(3)),
     paymentStatus: input.paymentStatus as any,
+    paidAt: input.paymentStatus === "paid" || input.paymentStatus === "partial"
+      ? (input.paidAt ?? input.invoiceDate)
+      : null,
     paidAmount: String((input.paidAmount ?? 0).toFixed(3)),
     remainingAmount: input.paymentStatus === "paid" ? "0.000" : String(totalAmount.toFixed(3)),
     notes: input.notes,
@@ -4420,6 +4430,13 @@ export async function createFreeInvoice(data: {
   vatPct: number;
   paymentStatus: "paid" | "deferred" | "partial" | "under_review";
   paidAmount?: number;
+  /**
+   * When the invoice was actually PAID. Defaults to the invoice date, not
+   * "now" — the daily accounts view groups paid invoices by this column, so
+   * stamping it with the current time makes every invoice recorded today pile
+   * onto today regardless of its real date.
+   */
+  paidAt?: Date;
   notes?: string;
   expenseCategory?: "operational" | "maintenance" | "fixed" | "other";
   items: { description: string; qty: number; unitPrice: number }[];
@@ -4468,7 +4485,7 @@ export async function createFreeInvoice(data: {
     paymentStatus: data.paymentStatus,
     paidAmount: data.paidAmount != null ? data.paidAmount.toFixed(3) : "0",
     remainingAmount: initialRemainingAmount.toFixed(3),
-    paidAt: isPaid ? new Date() : undefined,
+    paidAt: isPaid ? (data.paidAt ?? data.date) : undefined,
     expenseCategory: data.expenseCategory ?? "other",
     notes: data.notes,
   });

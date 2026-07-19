@@ -3608,6 +3608,8 @@ export const appRouter = router({
         vatPct: z.number().min(0).max(100).default(0),
         paymentStatus: z.enum(["paid", "deferred", "partial", "under_review"]),
         paidAmount: z.number().optional(),
+        // Defaults to the invoice date server-side when omitted.
+        paidAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
         notes: z.string().optional(),
         expenseCategory: z.enum(["operational", "maintenance", "fixed", "other"]).optional(),
         items: z.array(z.object({
@@ -3620,6 +3622,7 @@ export const appRouter = router({
         const invoiceId = await createFreeInvoice({
           ...input,
           date: new Date(input.date),
+          paidAt: input.paidAt ? new Date(input.paidAt) : undefined,
         });
         return invoiceId;
       }),

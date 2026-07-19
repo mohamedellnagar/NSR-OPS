@@ -2713,6 +2713,11 @@ function FreeInvoiceFormInline({ ar, isRTL, onClose, onSuccess, editInvoiceId, e
   const [vatPct, setVatPct] = useState(editData?.vatPct ? String(parseFloat(editData.vatPct)) : "0");
   const [paymentStatus, setPaymentStatus] = useState<"paid" | "deferred" | "partial">(editData?.paymentStatus ?? "deferred");
   const [paidAmount, setPaidAmount] = useState(editData?.paidAmount ? String(parseFloat(editData.paidAmount)) : "");
+  // When the invoice was actually paid. Blank = use the invoice date, which is
+  // what the daily accounts view groups by.
+  const [paidAtDate, setPaidAtDate] = useState(
+    editData?.paidAt ? new Date(editData.paidAt).toISOString().slice(0, 10) : ""
+  );
   const [notes, setNotes] = useState(editData?.notes ?? "");
   const [items, setItems] = useState<FreeItem[]>(() => {
     if (editData?.items?.length) {
@@ -2765,6 +2770,7 @@ function FreeInvoiceFormInline({ ar, isRTL, onClose, onSuccess, editInvoiceId, e
       vatPct: parseFloat(vatPct) || 0,
       paymentStatus,
       paidAmount: paymentStatus === "partial" ? parseFloat(paidAmount) || 0 : undefined,
+      paidAt: paymentStatus === "deferred" ? undefined : (paidAtDate || invoiceDate),
       notes: notes || undefined,
       items: items.map(it => ({
         description: it.description,
@@ -2856,6 +2862,22 @@ function FreeInvoiceFormInline({ ar, isRTL, onClose, onSuccess, editInvoiceId, e
             </SelectContent>
           </Select>
         </div>
+        {paymentStatus !== "deferred" && (
+          <div className="space-y-1.5">
+            <Label>{ar ? "تاريخ الدفع" : "Payment Date"}</Label>
+            <Input
+              type="date"
+              value={paidAtDate || invoiceDate}
+              onChange={e => setPaidAtDate(e.target.value)}
+            />
+            <p className="text-[11px] text-muted-foreground">
+              {ar
+                ? "يحدد اليوم الذي تظهر فيه الفاتورة في الحسابات اليومية. الافتراضي تاريخ الفاتورة."
+                : "Controls which day this invoice appears under in daily accounts."}
+            </p>
+          </div>
+        )}
+
         {paymentStatus === "partial" && (
           <div className="space-y-1.5">
             <Label>{ar ? "المبلغ المدفوع" : "Paid Amount"}</Label>
